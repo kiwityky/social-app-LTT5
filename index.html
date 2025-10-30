@@ -244,6 +244,33 @@
     <button id="ai-send" class="ml-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold">Gửi</button>
   </div>
 </div>
+<!-- MODAL GAME CENTER -->
+<div id="game-center-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
+  <div class="bg-white text-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative overflow-y-auto max-h-[90vh]">
+    <button onclick="closeModal('game-center-modal')" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+    <h2 class="text-2xl font-extrabold text-center mb-4 text-blue-700">🎮 Trung tâm trò chơi</h2>
+
+    <!-- BẢNG XẾP HẠNG -->
+    <div class="mb-6">
+      <h3 class="text-lg font-bold mb-2 text-yellow-600">🏆 Bảng xếp hạng người dùng</h3>
+      <ul id="user-leaderboard" class="divide-y divide-gray-200">
+        <li class="text-gray-500 text-center py-2">Đang tải dữ liệu...</li>
+      </ul>
+    </div>
+
+    <!-- DANH SÁCH TRÒ CHƠI -->
+    <div>
+      <h3 class="text-lg font-bold mb-2 text-green-600">🎲 Danh sách trò chơi</h3>
+      <div class="flex flex-col gap-3">
+        <button onclick="window.location.href='game.html'" 
+                class="flex items-center justify-between p-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition">
+          <span class="font-semibold">🎵 Phi Âm (Rhythm Tiles)</span>
+          <span class="text-sm opacity-80">Chơi ngay</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
     <script type="module" src="main.js"></script> 
     

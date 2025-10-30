@@ -234,9 +234,107 @@ try {
   const gameBtn = document.getElementById('open-game-btn');
   if (gameBtn) {
     gameBtn.addEventListener('click', () => {
-      window.location.href = 'game.html';
+      //window.location.href = 'game.html';
     });
   }
+// ===============================
+// MỞ MODAL TRUNG TÂM TRÒ CHƠI
+// ===============================
+if (gameBtn) {
+  gameBtn.addEventListener('click', async () => {
+    const modal = document.getElementById('game-center-modal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    await loadUserLeaderboard();
+  });
+}
+
+// ===============================
+// TÍNH VÀ TẢI BẢNG XẾP HẠNG
+// ===============================
+async function loadUserLeaderboard() {
+  const listEl = document.getElementById('user-leaderboard');
+  listEl.innerHTML = `<li class="text-center text-gray-500 py-2">Đang tính điểm...</li>`;
+
+  try {
+    const usersRef = collection(db, 'users');
+    const snapshot = await getDocs(usersRef);
+    let leaderboard = [];
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const score = calculateDailyScore(data);
+      leaderboard.push({
+        name: data.name || 'Người dùng ẩn danh',
+        score,
+        history: data.scoreHistory || []
+      });
+    });
+
+    leaderboard.sort((a, b) => b.score - a.score);
+    listEl.innerHTML = '';
+
+    leaderboard.forEach((u, i) => {
+      const li = document.createElement('li');
+      li.className = 'flex justify-between items-center py-2 px-2 hover:bg-gray-100 rounded cursor-pointer';
+      li.innerHTML = `
+        <span class="font-semibold">${i + 1}. ${u.name}</span>
+        <span class="text-blue-600 font-bold">${u.score} điểm</span>
+      `;
+      li.addEventListener('click', () => showScoreHistory(u));
+      listEl.appendChild(li);
+    });
+
+    if (leaderboard.length === 0) {
+      listEl.innerHTML = `<li class="text-center text-gray-500 py-2">Chưa có dữ liệu người dùng.</li>`;
+    }
+  } catch (err) {
+    console.error("Lỗi tải BXH:", err);
+    listEl.innerHTML = `<li class="text-center text-red-500 py-2">Lỗi khi tải dữ liệu.</li>`;
+  }
+}
+
+// ===============================
+// HÀM TÍNH ĐIỂM TỔNG
+// ===============================
+function calculateDailyScore(data) {
+  const usageMinutes = data.usageMinutesToday || 0;
+  const videosCount = data.videosCount || 0;
+  const lostVideos = data.lostVideos || 0;
+  let score = data.baseScore || 0;
+
+  // Quy tắc: dưới 45' +1, trên 45' -1
+  if (usageMinutes <= 45) score += 1; else score -= 1;
+
+  // Mỗi video hợp lệ +1, mất video trừ tương ứng
+  score += videosCount;
+  score -= lostVideos;
+
+  // Lưu lại vào lịch sử (có thể lưu Firestore riêng)
+  return score;
+}
+
+// ===============================
+// HIỂN THỊ LỊCH SỬ ĐIỂM
+// ===============================
+function showScoreHistory(user) {
+  const history = user.history || [];
+  const details = history.length
+    ? history.map(h => `<li>${h.date}: ${h.change > 0 ? '+' : ''}${h.change} (${h.reason})</li>`).join('')
+    : '<li>Chưa có lịch sử điểm.</li>';
+
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+  modal.innerHTML = `
+    <div class="bg-white text-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+      <button onclick="this.parentElement.parentElement.remove()" 
+              class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
+      <h3 class="text-xl font-bold mb-3 text-center text-blue-700">📊 Lịch sử điểm của ${user.name}</h3>
+      <ul class="list-disc pl-5 text-gray-700 space-y-1">${details}</ul>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
 
   // ===== NÚT TÌM KIẾM =====
   const searchBtn = document.getElementById('search-btn');

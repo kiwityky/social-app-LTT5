@@ -1,8 +1,8 @@
 import { serverTimestamp, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { formatUserId, getYoutubeId, isYoutubeUrl, MUTE_ICON_PATH, UNMUTE_ICON_PATH, PLAY_ICON_PATH, PAUSE_ICON_PATH, closeModal } from './config.js';
-import { updateDoc, doc, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { firebaseConfig } from './config.js';
+import {getDoc, updateDoc, doc, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { firebaseConfig,LIKE_ICON_PATH, SHARE_ICON_PATH } from './config.js';
 
 // Biến giữ dependencies để render có thể truy cập db & getUserId
 let videoDependencies = null;
@@ -242,14 +242,15 @@ const renderVideoFeed = (posts, DOM) => {
                 </button>
 
                 <button class="like-btn ctrl-btn ${likedByMe ? 'liked' : ''}" title="Thích">
-                    <span style="font-size:18px;line-height:1">❤️</span>
-                </button>
-                <p class="like-count">${likeCountText}</p>
+    <img class="like-icon h-6 w-6" src="${LIKE_ICON_PATH}" alt="Like">
+</button>
+<p class="like-count">${likeCountText}</p>
 
-                <button class="share-btn ctrl-btn" title="Chia sẻ">
-                    <span style="font-size:18px;line-height:1">🔗</span>
-                </button>
-                <p class="share-count">${shareCountText}</p>
+<button class="share-btn ctrl-btn" title="Chia sẻ">
+    <img class="share-icon h-6 w-6" src="${SHARE_ICON_PATH}" alt="Share">
+</button>
+<p class="share-count">${shareCountText}</p>
+
             </div>
         `;
 
@@ -398,21 +399,49 @@ const handleLike = async (postId) => {
 };
 
 /**
- * Xử lý Share: tăng shareCount (Firestore) và copy link vào clipboard.
+ * Xử lý Share: mỗi người chỉ được chia sẻ 1 lần / video.
  */
 const handleShare = async (postId, videoUrl) => {
     const deps = videoDependencies;
+    const userId = deps?.getUserId?.();
+    if (!userId) {
+        return alert("Vui lòng đăng nhập để chia sẻ video.");
+    }
     if (!deps || !deps.db) {
         console.error("DB không khả dụng.");
         return;
     }
+
     const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
+    const postEl = document.querySelector(`[data-id='${postId}']`);
+    const shareCountEl = postEl?.querySelector('.share-count');
 
     try {
-        // tăng bộ đếm chia sẻ
-        await updateDoc(postRef, { shareCount: increment(1) });
+        // Lấy dữ liệu hiện tại (an toàn)
+        const snapshot = await getDoc(postRef);
+        const postData = snapshot.exists() ? snapshot.data() : {};
+        const sharedBy = Array.isArray(postData.sharedBy) ? postData.sharedBy : [];
 
-        // copy link (nếu có) hoặc đường dẫn bài post
+        // Nếu user đã chia sẻ
+        if (sharedBy.includes(userId)) {
+            alert("Bạn đã chia sẻ video này rồi.");
+            return;
+        }
+
+        // Nếu chưa có trường sharedBy, khởi tạo mảng mới
+        const newSharedBy = [...sharedBy, userId];
+
+        // Cập nhật Firestore: lưu cả mảng sharedBy mới + tăng shareCount
+        await updateDoc(postRef, {
+            sharedBy: newSharedBy,
+            shareCount: increment(1)
+        });
+
+        // Cập nhật UI
+        const cur = parseInt(shareCountEl?.textContent || '0');
+        if (shareCountEl) shareCountEl.textContent = isNaN(cur) ? '1' : (cur + 1).toString();
+
+        // Copy link video
         const textToCopy = videoUrl || window.location.href;
         if (navigator?.clipboard?.writeText) {
             await navigator.clipboard.writeText(textToCopy);
@@ -420,11 +449,15 @@ const handleShare = async (postId, videoUrl) => {
         } else {
             prompt("Sao chép liên kết video:", textToCopy);
         }
+
     } catch (error) {
         console.error("Lỗi khi chia sẻ:", error);
         alert("Không thể chia sẻ. Vui lòng thử lại.");
     }
 };
+
+
+
 
 /**
  * Tải danh sách bài đăng từ Firestore và hiển thị.

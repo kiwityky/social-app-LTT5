@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LTT5 Shorts - Nền Tảng Video Học Tập</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app" class="relative">
+        <header class="bg-white p-4 shadow-lg flex justify-between items-center border-b-4 border-slate-600 fixed top-0 left-0 right-0 z-20 max-w-4xl mx-auto">
+            <h1 class="text-2xl font-extrabold text-slate-800">LTT <span class="text-lg font-medium text-gray-500">Fine</span></h1>
+            <div id="auth-status" class="text-xs font-mono bg-gray-100 p-2 rounded-lg text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
+                Đang tải...
+            </div>
+        </header>
+
+        <main class="mt-16"> 
+             <div id="video-feed-container">
+                <p id="loading-feed" class="text-center text-gray-500 p-8">Đang tải video...</p>
+            </div>
+        </main>
+        
+        <div id="auth-container" class="video-card p-6 mb-8 fixed inset-0 z-30 bg-white hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Đăng Nhập/Đăng Ký</h2>
+            <form id="login-form" class="space-y-4 max-w-sm mx-auto mt-10">
+                <input type="email" id="auth-email" placeholder="Email" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" required>
+                <input type="password" id="auth-password" placeholder="Mật khẩu (tối thiểu 6 ký tự)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" required>
+                <div class="flex flex-col space-y-2 md:flex-row md:space-x-4 md:space-y-0">
+                    <button type="submit" id="login-btn" class="btn-primary flex-1">
+                        <span>Đăng Nhập</span>
+                    </button>
+                    <button type="button" id="register-btn" class="btn-primary flex-1 bg-green-500 hover:bg-green-600">
+                        <span>Đăng Ký Tài Khoản Mới</span>
+                    </button>
+                </div>
+                <p id="auth-message" class="text-sm text-center text-red-500"></p>
+            </form>
+        </div>
+        
+    </div>
+
+    <div id="bottom-nav" class="p-3 flex justify-around items-center max-w-4xl mx-auto">
+        <button onclick="window.location.reload();" class="text-gray-500 hover:text-slate-600 transition duration-150 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0h6m-6 0h6m-5 3v-3" />
+            </svg>
+        </button>
+        <button id="open-post-modal-btn" class="bg-slate-600 hover:bg-slate-700 text-white p-4 rounded-full shadow-xl transform transition duration-150 scale-105">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+            </svg>
+        </button>
+        <button id="open-recommend-modal-btn" class="text-gray-500 hover:text-slate-600 transition duration-150 p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="post-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg transform transition-all">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-bold text-slate-700">Đăng Video Mới</h3>
+                <button onclick="closeModal('post-modal')" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="post-form" class="space-y-4">
+                <input type="text" id="post-title" placeholder="Tiêu đề video (Tối đa 50 ký tự)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" maxlength="50" required>
+                <textarea type="text" id="post-description" placeholder="Mô tả hoặc nội dung chính (Tối đa 100 ký tự)" rows="2" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" maxlength="100" required></textarea>
+                
+                <div class="flex items-center space-x-4 border p-3 rounded-lg bg-gray-50">
+                    <label class="font-medium text-gray-700">Chọn nguồn:</label>
+                    <div class="flex items-center">
+                        <input id="source-upload" type="radio" name="video_source" value="upload" checked class="h-4 w-4 text-slate-600 border-gray-300">
+                        <label for="source-upload" class="ml-2 text-sm text-gray-700">Tải File lên</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="source-youtube" type="radio" name="video_source" value="youtube" class="h-4 w-4 text-slate-600 border-gray-300">
+                        <label for="source-youtube" class="ml-2 text-sm text-gray-700">Link YouTube</label>
+                    </div>
+                </div>
+
+                <input type="file" id="post-file" accept="video/*" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500">
+                
+                <input type="url" id="post-url" placeholder="Dán URL Video YouTube công khai" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 hidden">
+                
+                <button type="submit" id="upload-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
+                    <div id="upload-spinner" class="spinner hidden mr-2 w-5 h-5 border-t-2"></div>
+                    <span>Đăng Video</span>
+                </button>
+                <p id="post-message" class="text-sm text-center text-red-500"></p>
+                <div id="upload-progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden">
+                    <div id="upload-progress" class="bg-slate-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="recommend-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg transform transition-all">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="text-xl font-bold text-slate-700">Ý Tưởng Nội Dung Shorts Cá Nhân Hóa</h3>
+                <button onclick="closeModal('recommend-modal')" class="text-gray-400 hover:text-gray-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div id="modal-content" class="max-h-96 overflow-y-auto">
+                 <p class="text-center text-gray-500">Nhấn nút **Yêu Cầu Ý Tưởng** để AI phân tích hồ sơ của bạn.</p>
+            </div>
+            <button id="recommend-btn" class="btn-primary mt-4 flex items-center justify-center space-x-2 w-full">
+                <div id="recommend-loading" class="spinner hidden mr-2"></div>
+                <span>Yêu Cầu Ý Tưởng Shorts từ AI</span>
+            </button>
+        </div>
+    </div>
+
+    <script type="module" src="main.js"></script> 
+</body>
+</html>

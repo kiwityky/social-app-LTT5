@@ -1,6 +1,11 @@
 import { serverTimestamp, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { formatUserId, getYoutubeId, isYoutubeUrl, MUTE_ICON_PATH, UNMUTE_ICON_PATH, PLAY_ICON_PATH, PAUSE_ICON_PATH, closeModal } from './config.js';
+import { updateDoc, doc, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { firebaseConfig } from './config.js';
+
+// Biến giữ dependencies để render có thể truy cập db & getUserId
+let videoDependencies = null;
 
 let currentActiveMediaElement = null; // Biến trạng thái để theo dõi media đang phát
 
@@ -71,7 +76,10 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
             videoUrl: finalVideoUrl,
             timestamp: serverTimestamp(),
             username: `User_${formatUserId(userId)}`,
-            isYoutube: !isFile 
+            isYoutube: !isFile,
+            // MỚI: khởi tạo cho Like & Share
+            likes: [],
+            shareCount: 0
         };
 
         // Lỗi đã được sửa: Đã import addDoc
@@ -168,54 +176,56 @@ const renderVideoFeed = (posts, DOM) => {
 
     posts.forEach(post => {
         const postElement = document.createElement('div');
-        postElement.className = 'video-snap-item relative'; 
+        postElement.className = 'video-snap-item relative';
+        postElement.setAttribute('data-id', post.id);
+
+        // === Media hiển thị ===
         let mediaHtml = '';
-        let playPauseOverlayHtml = ''; 
-        
+        let playPauseOverlayHtml = '';
+
         if (post.isYoutube) {
             const videoId = getYoutubeId(post.videoUrl);
-            if (!videoId) return; 
+            if (!videoId) return;
             const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&loop=1&playlist=${videoId}`;
-            
             mediaHtml = `
-                <iframe 
-                    class="video-display media-element" 
-                    src="${embedUrl}"
-                    frameborder="0" 
-                    allow="autoplay; encrypted-media; gyroscope; picture-in-picture" 
-                    allowfullscreen>
+                <iframe class="video-display media-element"
+                        src="${embedUrl}"
+                        frameborder="0"
+                        allow="autoplay; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
                 </iframe>
             `;
-            
         } else {
             mediaHtml = `
-                <video 
-                    class="video-display media-element" 
-                    src="${post.videoUrl}" 
-                    loop 
-                    muted 
-                    playsinline
-                    style="object-fit: contain; pointer-events: none;">
+                <video class="video-display media-element"
+                       src="${post.videoUrl}"
+                       loop
+                       muted
+                       playsinline
+                       style="object-fit: contain; pointer-events: none;">
                     Trình duyệt của bạn không hỗ trợ thẻ video.
                 </video>
             `;
-            
             playPauseOverlayHtml = `
-                <div onclick="togglePlayPause(this.closest('.video-snap-item'))" 
-                     class="absolute inset-0 z-5 cursor-pointer">
-                </div>
-                
-                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 
-                            bg-black bg-opacity-0 p-4 rounded-full transition duration-300 pointer-events-none">
+                <div onclick="togglePlayPause(this.closest('.video-snap-item'))"
+                     class="absolute inset-0 z-5 cursor-pointer"></div>
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-0 p-4 rounded-full pointer-events-none">
                     <img class="play-pause-icon h-10 w-10 text-white hidden" src="${PAUSE_ICON_PATH}" alt="Play/Pause">
                 </div>
             `;
         }
-        
+
+        // === Chuẩn bị dữ liệu like/share ===
+        const currentUserId = videoDependencies?.getUserId?.();
+        const likedByMe = Array.isArray(post.likes) && currentUserId && post.likes.includes(currentUserId);
+        const likeCountText = post.likes?.length ? String(post.likes.length) : '';
+        const shareCountText = post.shareCount ? String(post.shareCount) : '';
+
+        // === Nội dung hiển thị bài ===
         postElement.innerHTML = `
             ${mediaHtml}
-            ${playPauseOverlayHtml} 
-            
+            ${playPauseOverlayHtml}
+
             <div class="absolute bottom-16 left-0 right-0 p-4 text-white z-10">
                 <div class="bg-black bg-opacity-0 p-3 rounded-lg">
                     <h4 class="font-bold text-lg">${post.title}</h4>
@@ -223,18 +233,40 @@ const renderVideoFeed = (posts, DOM) => {
                     <p class="text-xs text-gray-300 mt-2">@${post.username || formatUserId(post.userId)} - Nguồn: ${post.isYoutube ? 'YouTube' : 'Upload'}</p>
                 </div>
             </div>
-            
-            <button onclick="toggleMute(this.closest('.video-snap-item').querySelector('.media-element'))" 
-                    class="absolute top-1/2 -translate-y-1/2 right-5 bg-white bg-opacity-50 p-2 rounded-full z-10 hover:bg-opacity-70 transition">
-                <img class="volume-icon h-6 w-6 text-black" src="${MUTE_ICON_PATH}" alt="Volume">
-            </button>
+
+            <!-- CỤM ĐIỀU KHIỂN CHUNG -->
+            <div class="video-controls">
+                <button onclick="toggleMute(this.closest('.video-snap-item').querySelector('.media-element'))"
+                        class="ctrl-btn volume-btn">
+                    <img class="volume-icon h-6 w-6 text-black" src="${MUTE_ICON_PATH}" alt="Volume">
+                </button>
+
+                <button class="like-btn ctrl-btn ${likedByMe ? 'liked' : ''}" title="Thích">
+                    <span style="font-size:18px;line-height:1">❤️</span>
+                </button>
+                <p class="like-count">${likeCountText}</p>
+
+                <button class="share-btn ctrl-btn" title="Chia sẻ">
+                    <span style="font-size:18px;line-height:1">🔗</span>
+                </button>
+                <p class="share-count">${shareCountText}</p>
+            </div>
         `;
+
+        // === Gắn vào container ===
         DOM.videoFeedContainer.appendChild(postElement);
+
+        // === Gắn sự kiện ===
+        const likeBtnEl = postElement.querySelector('.like-btn');
+        const shareBtnEl = postElement.querySelector('.share-btn');
+        if (likeBtnEl) likeBtnEl.addEventListener('click', e => { e.stopPropagation(); handleLike(post.id); });
+        if (shareBtnEl) shareBtnEl.addEventListener('click', e => { e.stopPropagation(); handleShare(post.id, post.videoUrl); });
     });
-    
+
     DOM.videoFeedContainer.prepend(DOM.loadingFeedEl);
-    handleVideoScrolling(DOM); // Khởi tạo cuộn sau khi render
+    handleVideoScrolling(DOM);
 };
+
 
 
 const handleVideoScrolling = (DOM) => {
@@ -312,6 +344,87 @@ const handleVideoScrolling = (DOM) => {
          }
     }
 };
+/**
+ * Xử lý Like: cập nhật Firestore (thêm/xóa UID trong mảng likes).
+ * Cập nhật UI tối ưu hoá ngay lập tức (optimistic).
+ */
+const handleLike = async (postId) => {
+    const deps = videoDependencies;
+    const userId = deps?.getUserId?.();
+    if (!userId) {
+        return alert("Vui lòng đăng nhập để thích video.");
+    }
+    if (!deps || !deps.db) {
+        console.error("DB không khả dụng.");
+        return;
+    }
+
+    // Tham chiếu tới document bài đăng
+    const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
+
+    // UI element tham chiếu
+    const postEl = document.querySelector(`[data-id='${postId}']`);
+    if (!postEl) {
+        // fallback: chỉ update Firestore
+        try {
+            await updateDoc(postRef, { likes: arrayUnion(userId) });
+        } catch (e) { console.error(e); }
+        return;
+    }
+
+    const likeBtn = postEl.querySelector('.like-btn');
+    const likeCountEl = postEl.querySelector('.like-count');
+    const currentlyLiked = likeBtn.classList.contains('liked'); // class 'liked' ta dùng để biết trạng thái
+
+    try {
+        if (currentlyLiked) {
+            // undo like
+            await updateDoc(postRef, { likes: arrayRemove(userId) });
+            likeBtn.classList.remove('liked');
+            // cập nhật số (nếu có)
+            const cur = parseInt(likeCountEl.textContent || '0');
+            likeCountEl.textContent = cur > 1 ? (cur - 1) : '';
+        } else {
+            // add like
+            await updateDoc(postRef, { likes: arrayUnion(userId) });
+            likeBtn.classList.add('liked');
+            const cur = parseInt(likeCountEl.textContent || '0');
+            likeCountEl.textContent = (isNaN(cur) ? 1 : cur + 1);
+        }
+    } catch (error) {
+        console.error("Lỗi khi cập nhật like:", error);
+        alert("Không thể cập nhật like. Vui lòng thử lại.");
+    }
+};
+
+/**
+ * Xử lý Share: tăng shareCount (Firestore) và copy link vào clipboard.
+ */
+const handleShare = async (postId, videoUrl) => {
+    const deps = videoDependencies;
+    if (!deps || !deps.db) {
+        console.error("DB không khả dụng.");
+        return;
+    }
+    const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
+
+    try {
+        // tăng bộ đếm chia sẻ
+        await updateDoc(postRef, { shareCount: increment(1) });
+
+        // copy link (nếu có) hoặc đường dẫn bài post
+        const textToCopy = videoUrl || window.location.href;
+        if (navigator?.clipboard?.writeText) {
+            await navigator.clipboard.writeText(textToCopy);
+            alert("Đã sao chép liên kết video vào clipboard.");
+        } else {
+            prompt("Sao chép liên kết video:", textToCopy);
+        }
+    } catch (error) {
+        console.error("Lỗi khi chia sẻ:", error);
+        alert("Không thể chia sẻ. Vui lòng thử lại.");
+    }
+};
 
 /**
  * Tải danh sách bài đăng từ Firestore và hiển thị.
@@ -352,6 +465,8 @@ export const loadPosts = (db, DOM, getPostsCollectionRef) => {
  * @param {object} dependencies - Các dependencies cần thiết (db, storage, collectionRef)
  */
 export const setupVideoListeners = (DOM, dependencies) => {
+    // Lưu dependencies để renderVideoFeed và handler khác sử dụng
+    videoDependencies = dependencies;
     // Xử lý chuyển đổi input File/URL
     DOM.sourceUploadRadio.addEventListener('change', () => {
         DOM.postFileEl.classList.remove('hidden');

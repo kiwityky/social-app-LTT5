@@ -18,6 +18,8 @@ export const MUTE_ICON_PATH = 'svg/mute.svg';
 export const UNMUTE_ICON_PATH = 'svg/unmute.svg';
 export const PLAY_ICON_PATH = 'svg/play.svg'; 
 export const PAUSE_ICON_PATH = 'svg/pause.svg'; 
+export const LIKE_ICON_PATH = 'svg/like.svg';
+export const SHARE_ICON_PATH = 'svg/share.svg';
 
 // Dữ liệu hồ sơ chuyên môn của giảng viên (Dùng cho tính năng AI)
 export const userExpertise = `

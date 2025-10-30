@@ -13,9 +13,13 @@
         <header class="bg-white p-4 shadow-lg flex justify-between items-center border-b-4 border-slate-600 fixed top-0 left-0 right-0 z-20 max-w-4xl mx-auto">
             <div class="flex items-center space-x-4">
     <img src="assets/logo.png" alt="Logo" class="h-16 w-16 object-contain rounded-md shadow-sm">
-    <h1 class="text-2xl font-extrabold text-slate-800">
-        LTT <span class="text-lg font-medium text-gray-500">🌻Fine</span>
-    </h1>
+    <h1 class="text-2xl font-extrabold text-slate-800 flex items-center gap-1">
+  LTT 
+  <span id="sunflower-btn" class="text-lg font-medium text-gray-500 cursor-pointer hover:scale-125 transition-transform duration-200">
+    🌻Fine
+  </span>
+</h1>
+
 </div>
 <div id="auth-status" class="text-xs font-mono bg-gray-100 p-2 rounded-lg text-gray-700 overflow-hidden text-ellipsis whitespace-nowrap">
                 Đang tải...
@@ -227,6 +231,19 @@
   </div>
 </div>
 
+<!-- CHATBOX AI GEMINI -->
+<div id="ai-chatbox" class="fixed bottom-20 right-5 w-80 bg-white text-gray-800 rounded-2xl shadow-2xl hidden flex-col overflow-hidden border border-gray-300 z-50">
+  <div class="bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-4 py-3 flex justify-between items-center">
+    <span class="font-semibold">Trợ lý 🌻Fine</span>
+    <button id="close-ai-chat" class="text-white text-xl font-bold">&times;</button>
+  </div>
+  <div id="ai-messages" class="flex-1 p-3 space-y-2 overflow-y-auto h-72 bg-gray-50"></div>
+  <div class="border-t p-2 flex items-center bg-white">
+    <input id="ai-input" type="text" placeholder="Nhập câu hỏi..." 
+           class="flex-1 p-2 rounded-lg border border-gray-300 focus:ring focus:ring-blue-200 focus:outline-none">
+    <button id="ai-send" class="ml-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg font-semibold">Gửi</button>
+  </div>
+</div>
 
     <script type="module" src="main.js"></script> 
     

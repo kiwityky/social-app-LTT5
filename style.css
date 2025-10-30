@@ -385,10 +385,19 @@ input::placeholder {
 }
 /* Tạo khoảng cách giữa đáy khung nhập thông tin và thanh navigation */
 #profile-modal .bg-white {
-  max-height: 90vh;
+  max-height: calc(100vh - 80px); /* chừa khoảng trống cho thanh navigation */
   overflow-y: auto;
-  margin-bottom: -15px;
+  margin-bottom: 0px; /* bỏ khoảng âm */
+  padding-bottom: 80px; /* tạo vùng đệm để không bị che */
 }
+#profile-modal .bg-white::-webkit-scrollbar {
+  width: 8px;
+}
+#profile-modal .bg-white::-webkit-scrollbar-thumb {
+  background: #b0c4de;
+  border-radius: 8px;
+}
+
 #search-box {
   background-color: #0b1733 !important; /* xanh đen */
   color: white !important;
@@ -405,4 +414,20 @@ input::placeholder {
   background-color: #b8c6e0 !important;
   color: #000000 !important;
   border: 1px solid #0b1733 !important;
+}
+#ai-chatbox {
+  animation: fadeInUp 0.4s ease;
+}
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#sunflower-btn {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.25s ease, text-shadow 0.25s ease;
+}
+#sunflower-btn:hover {
+  transform: scale(1.15);
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
 }

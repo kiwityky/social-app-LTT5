@@ -263,3 +263,66 @@ try {
       });
     });
   }
+  import { GEMINI_API_KEY, GEMINI_API_URL } from './config.js';
+
+// ===== CHATBOX AI GEMINI =====
+const logoEl = document.getElementById('sunflower-btn');
+const chatbox = document.getElementById('ai-chatbox');
+const aiInput = document.getElementById('ai-input');
+const aiSend = document.getElementById('ai-send');
+const aiMessages = document.getElementById('ai-messages');
+const aiClose = document.getElementById('close-ai-chat');
+
+// Mở chatbox khi nhấp logo hoa hướng dương
+if (logoEl) {
+  logoEl.addEventListener('click', () => {
+    chatbox.classList.toggle('hidden');
+  });
+}
+
+// Đóng chatbox
+if (aiClose) aiClose.addEventListener('click', () => chatbox.classList.add('hidden'));
+
+// Gửi câu hỏi
+if (aiSend) {
+  aiSend.addEventListener('click', async () => {
+    const question = aiInput.value.trim();
+    if (!question) return;
+
+    appendMessage('user', question);
+    aiInput.value = '';
+    appendMessage('bot', 'Đang xử lý...');
+
+    try {
+      const response = await fetch(GEMINI_API_URL + GEMINI_API_KEY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: question }] }]
+        })
+      });
+
+      const data = await response.json();
+      const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Xin lỗi, tôi chưa có câu trả lời cho điều đó.";
+      updateLastBotMessage(answer);
+    } catch (err) {
+      console.error(err);
+      updateLastBotMessage("Lỗi khi gọi API Gemini.");
+    }
+  });
+}
+
+function appendMessage(sender, text) {
+  const msg = document.createElement('div');
+  msg.className = sender === 'user' 
+    ? 'bg-sky-100 text-gray-800 self-end p-2 rounded-lg max-w-[85%] ml-auto' 
+    : 'bg-gray-200 text-gray-900 p-2 rounded-lg max-w-[85%]';
+  msg.textContent = text;
+  aiMessages.appendChild(msg);
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+}
+
+function updateLastBotMessage(newText) {
+  const last = aiMessages.querySelector('.bg-gray-200:last-child');
+  if (last) last.textContent = newText;
+}

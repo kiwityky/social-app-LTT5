@@ -362,3 +362,30 @@ input::placeholder {
   color: #9ca3af; /* xám nhạt dễ nhìn */
   opacity: 1;
 }
+#profile-modal .bg-white {
+  background: #f9fdff;
+  border: 1px solid #d0def7;
+  border-radius: 14px;
+}
+#profile-modal {
+  align-items: flex-start !important;
+  padding-top: 5vh !important; /* đẩy modal lên ~5% chiều cao màn hình */
+}
+@media (min-width: 768px) {
+  #profile-modal {
+    padding-top: 2vh !important;
+  }
+}
+#center-toast {
+  transition: opacity 0.5s ease, transform 0.4s ease;
+}
+#center-toast.hide {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.9);
+}
+/* Tạo khoảng cách giữa đáy khung nhập thông tin và thanh navigation */
+#profile-modal .bg-white {
+  max-height: 90vh;
+  overflow-y: auto;
+  margin-bottom: -15px;
+}

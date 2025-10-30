@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHI ÂM - Rhythm Tiles</title>
+    <!-- Tải Tailwind CSS cho styling cơ bản và responsiveness -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* --- CSS Tùy Chỉnh & Biến --- */
+        :root {
+            --game-width: 320px;
+            --tile-height: 50px;
+            --tile-width: 80px;
+            --hit-zone-height: 60px; 
+            --tile-color: #8A2BE2; /* Màu Tím Xanh sáng hơn */
+            --background-color-var: #0d0d1a;
+            --hit-zone-color: rgba(138, 43, 226, 0.8);
+            --gold-color: #FFD700;
+            --silver-color: #C0C0C0;
+            --bronze-color: #CD7F32;
+            --other-rank-color: #87CEEB; /* Sky blue for other ranks */
+        }
+
+        /* --- Hiệu ứng nền --- */
+        @keyframes gradient-animation {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(-45deg, #1a1a2e, #2c2c4d, #0d0d1a, #4a4e69);
+            background-size: 400% 400%;
+            animation: gradient-animation 15s ease infinite;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            width: var(--game-width);
+        }
+
+        .title-glow {
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px var(--tile-color), 0 0 35px var(--tile-color);
+        }
+
+        /* Player Info Box */
+        #player-info-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            padding: 8px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            margin-bottom: -5px; /* Pull start button closer */
+        }
+        #change-name-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+        }
+        #change-name-button svg {
+            width: 18px;
+            height: 18px;
+            color: #aaa;
+            transition: color 0.2s, transform 0.2s;
+        }
+        #change-name-button:hover svg {
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+
+        #info-panel {
+            background-color: rgba(44, 44, 77, 0.8);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 15px 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            width: 100%;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #game-container {
+            width: var(--game-width); 
+            height: 450px; 
+            border: 8px solid #4a4e69; 
+            border-radius: 10px;
+            overflow: hidden; 
+            position: relative;
+            background-color: var(--background-color-var);
+            transition: background-color 1s ease;
+            box-shadow: 0 0 20px rgba(74, 78, 105, 0.7), 0 0 30px var(--tile-color); 
+        }
+
+        #game-area {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .tile {
+            position: absolute;
+            top: calc(0px - var(--tile-height)); 
+            width: var(--tile-width);
+            height: var(--tile-height);
+            background-color: var(--tile-color); 
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-sizing: border-box;
+            cursor: pointer;
+            transition: top 0s, background-color 0.1s; 
+            z-index: 10;
+            border-radius: 6px;
+        }
+        
+        .hit-zone {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: var(--hit-zone-height);
+            background: linear-gradient(to top, var(--hit-zone-color), rgba(138, 43, 226, 0));
+            box-shadow: 0 0 20px var(--hit-zone-color);
+            transition: all 1s ease;
+            z-index: 5;
+            pointer-events: none; 
+        }
+        
+        .col-0 { left: 0px; }
+        .col-1 { left: var(--tile-width); }
+        .col-2 { left: calc(2 * var(--tile-width)); }
+        .col-3 { left: calc(3 * var(--tile-width)); }
+
+        .btn {
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+            font-size: 1.1rem;
+            border: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+        .btn:active {
+            transform: translateY(1px) scale(0.98);
+        }
+
+        #start-button {
+            background: linear-gradient(45deg, #3b5998, #5c7fba);
+            color: white;
+        }
+
+        #key-display {
+            display: flex;
+            width: 100%;
+            justify-content: space-between; 
+            padding: 10px; 
+            margin-top: 10px;
+            background-color: rgba(44, 44, 77, 0.8); 
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .key-btn {
+            width: calc(var(--tile-width) - 6px);
+            height: 50px; 
+            line-height: 50px; 
+            text-align: center;
+            background-color: #f0f0f0; 
+            color: #1a1a2e; 
+            border-radius: 8px; 
+            font-size: 1.5rem; 
+            font-weight: 900;
+            box-shadow: 0 4px 0 #999; 
+            transition: all 0.05s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        .key-btn.active {
+             background-color: var(--tile-color);
+             color: #ffffff;
+             box-shadow: 0 2px 0 var(--hit-zone-color); 
+             transform: translateY(2px);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: linear-gradient(145deg, #2c2c4d, #1a1a2e);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            max-width: 90%;
+            width: 350px;
+            border: 1px solid rgba(255,255,255,0.2);
+            position: relative; /* Cho nút đóng */
+        }
+        
+        .close-button {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 2.2rem;
+            font-weight: bold;
+            color: #aaa;
+            background: none;
+            border: none;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+            line-height: 1;
+            padding: 5px;
+        }
+        .close-button:hover {
+            color: #fff;
+            transform: rotate(90deg);
+        }
+
+        #restart-button {
+            background: linear-gradient(45deg, #6a0572, #93079c);
+            color: #ffffff;
+            margin-top: 20px;
+        }
+
+        /* --- BẢNG XẾP HẠNG --- */
+        #leaderboard-container {
+            width: 100%;
+            margin-top: 20px;
+            background-color: rgba(44, 44, 77, 0.8);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .leaderboard-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--gold-color);
+            text-transform: uppercase;
+        }
+        #leaderboard-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            border-radius: 8px;
+            background-color: rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+            animation: fadeIn 0.5s ease-out backwards;
+        }
+        .leaderboard-item:nth-child(1) { animation-delay: 0.1s; }
+        .leaderboard-item:nth-child(2) { animation-delay: 0.2s; }
+        .leaderboard-item:nth-child(3) { animation-delay: 0.3s; }
+        .leaderboard-item:nth-child(4) { animation-delay: 0.4s; }
+        .leaderboard-item:nth-child(5) { animation-delay: 0.5s; }
+
+        .leaderboard-item:nth-child(odd) {
+            background-color: rgba(0,0,0,0.3);
+        }
+        .leaderboard-item:hover {
+            background-color: rgba(138, 43, 226, 0.3);
+        }
+        .leaderboard-rank {
+            font-weight: 700;
+            font-size: 1.1rem;
+            width: 40px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .leaderboard-rank .icon-trophy {
+            width: 24px;
+            height: 24px;
+        }
+        
+        /* Rank Colors */
+        .leaderboard-rank.rank-1, .leaderboard-rank.rank-1 .icon-trophy { color: var(--gold-color); }
+        .leaderboard-rank.rank-2, .leaderboard-rank.rank-2 .icon-trophy { color: var(--silver-color); }
+        .leaderboard-rank.rank-3, .leaderboard-rank.rank-3 .icon-trophy { color: var(--bronze-color); }
+        .leaderboard-rank.rank-other { color: var(--other-rank-color); }
+
+        .leaderboard-name {
+            flex-grow: 1;
+            text-align: left;
+            margin-left: 10px;
+            font-weight: 500;
+        }
+        .leaderboard-score {
+            font-weight: 700;
+            color: #f0f0f0;
+        }
+        
+        #name-modal-content input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #4a4e69;
+            background-color: #1a1a2e;
+            color: white;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            transition: border-color 0.2s;
+        }
+         #name-modal-content input:focus {
+            outline: none;
+            border-color: var(--tile-color);
+         }
+        
+    </style>
+</head>
+<body>
+<!-- Nút Trở về ứng dụng -->
+<button onclick="window.location.href='index.html'" 
+        class="fixed top-4 left-4 z-50 bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold py-2 px-4 rounded-full shadow-lg hover:from-blue-500 hover:to-indigo-600 transition-all duration-200">
+  ⬅️ Trở về LTTFine
+</button>
+
+<div id="app-container">
+    <h1 class="text-4xl font-black mb-4 text-[#3b5998] flex items-center justify-center gap-2 title-glow">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-[#8A2BE2] mr-2">
+            <path d="M9 18V5l12-2v13M9 18h12M9 18a2 2 0 1 0 0 4 2 2 0 1 0 0-4Z"/>
+            <path d="M21 16a2 2 0 1 0 0 4 2 2 0 1 0 0-4Z"/>
+        </svg>
+        PHI ÂM
+    </h1>
+    
+    <!-- Player Info Box -->
+    <div id="player-info-container" style="display: none;">
+        <p>Xin chào, <span id="current-player-name" class="font-bold text-yellow-300"></span></p>
+        <button id="change-name-button" title="Đổi tên">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                <path fill-rule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clip-rule="evenodd" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="info-panel">
+        <div class="flex justify-between text-xl font-bold mb-2 border-b border-gray-600 pb-2">
+            <p>Điểm: <span id="score" class="text-yellow-400">0</span></p>
+            <p>Combo: <span id="combo" class="text-green-400">0</span></p>
+        </div>
+         <div class="flex justify-between text-lg font-bold mb-2">
+            <p>Best Score: <span id="best-score" class="text-yellow-300">0</span></p>
+        </div>
+        <div class="text-sm">
+            <p>Cấp độ Tốc độ: <span id="current-level" class="font-bold">1 / 20</span></p>
+            <p>Thời gian chạy: <span id="current-speed-display" class="font-bold">4.0s</span></p>
+        </div>
+    </div>
+
+    <div id="game-container" style="display: none;">
+        <div id="game-area">
+            <div class="hit-zone"></div>
+        </div>
+    </div>
+    
+    <div id="key-display" style="display: none;">
+        <div class="key-btn" data-key="A">A</div>
+        <div class="key-btn" data-key="S">S</div>
+        <div class="key-btn" data-key="D">D</div>
+        <div class="key-btn" data-key="F">F</div>
+    </div>
+    <p id="key-hint" class="text-xs text-gray-400 mt-2" style="display: none;">Sử dụng **A, S, D, F** để bấm phím! (Nhấn **E** để về menu)</p>
+
+    <button id="start-button" class="btn mt-4">BẮT ĐẦU CHƠI</button>
+
+    <!-- Bảng Xếp Hạng -->
+    <div id="leaderboard-container">
+        <h2 class="leaderboard-title">🏆 BẢNG XẾP HẠNG 🏆</h2>
+        <ol id="leaderboard-list">
+            <li class="leaderboard-item" style="justify-content: center; color: #aaa;">Chưa có ai trên bảng xếp hạng!</li>
+        </ol>
+    </div>
+
+</div>
+
+<!-- Modal Game Over -->
+<div id="game-over-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <button id="close-game-over-button" class="close-button">&times;</button>
+        <h2 class="text-3xl font-bold mb-4 text-[#3b5998]" id="modal-title">GAME OVER! 💔</h2>
+        <p class="text-2xl mb-4">Điểm cuối cùng: <span id="final-score" class="text-yellow-400 font-extrabold">0</span></p>
+        <p class="text-xl mb-4">Điểm cao nhất: <span id="modal-best-score" class="text-yellow-300 font-extrabold">0</span></p>
+        <p class="mb-4 text-gray-300" id="modal-message"></p>
+        <button id="restart-button" class="btn">TRỞ VỀ MENU</button>
+    </div>
+</div>
+
+<!-- Modal Nhập Tên -->
+<div id="name-modal" class="modal" style="display: none;">
+    <div id="name-modal-content" class="modal-content">
+        <button id="close-name-modal-button" class="close-button">&times;</button>
+        <h2 id="name-modal-title" class="text-2xl font-bold text-yellow-300">🎉 ĐIỂM CAO MỚI! 🎉</h2>
+        <p class="mt-2 text-lg">Vui lòng nhập tên của bạn:</p>
+        <input type="text" id="player-name-input" placeholder="TÊN NGƯỜI CHƠI" maxlength="15">
+        <button id="submit-name-button" class="btn bg-green-600 hover:bg-green-700 text-white w-full">XÁC NHẬN</button>
+    </div>
+</div>
+
+
+<audio id="background-music" src="assets/WAY BACK HOME.mp3" preload="auto" loop></audio> 
+
+<script>
+    // --- DOM ELEMENTS ---
+    const gameContainer = document.getElementById('game-container');
+    const keyDisplay = document.getElementById('key-display');
+    const keyHint = document.getElementById('key-hint');
+    const leaderboardContainer = document.getElementById('leaderboard-container');
+    const gameArea = document.getElementById('game-area');
+    const scoreDisplay = document.getElementById('score');
+    const comboDisplay = document.getElementById('combo');
+    const currentLevelDisplay = document.getElementById('current-level');
+    const speedDisplay = document.getElementById('current-speed-display');
+    const startButton = document.getElementById('start-button');
+    const gameOverModal = document.getElementById('game-over-modal');
+    const finalScoreDisplay = document.getElementById('final-score');
+    const restartButton = document.getElementById('restart-button');
+    const modalTitle = document.getElementById('modal-title');
+    const modalMessage = document.getElementById('modal-message');
+    const backgroundMusic = document.getElementById('background-music');
+    const bestScoreDisplay = document.getElementById('best-score');
+    const modalBestScoreDisplay = document.getElementById('modal-best-score');
+    const closeGameOverButton = document.getElementById('close-game-over-button');
+    
+    // Player Info Elements
+    const playerInfoContainer = document.getElementById('player-info-container');
+    const currentPlayerNameDisplay = document.getElementById('current-player-name');
+    const changeNameButton = document.getElementById('change-name-button');
+    
+    // Leaderboard elements
+    const leaderboardList = document.getElementById('leaderboard-list');
+    const nameModal = document.getElementById('name-modal');
+    const nameModalTitle = document.getElementById('name-modal-title');
+    const playerNameInput = document.getElementById('player-name-input');
+    const submitNameButton = document.getElementById('submit-name-button');
+    const closeNameModalButton = document.getElementById('close-name-modal-button');
+
+    // --- GAME VARIABLES ---
+    let score = 0; let combo = 0; let currentLevel = 0; 
+    let isPlaying = false;
+    let tileGenerationInterval, levelTimer; 
+    let bestScore = 0;
+    let activeTiles = [];
+    let keyPressStatus = {};
+    let leaderboardData = [];
+    let currentPlayerName = '';
+    
+    // --- GAME CONSTANTS ---
+    const MAX_LEVEL = 19;
+    const INITIAL_TIME_MS = 4000; const MIN_TIME_MS = 1000;
+    const TIME_STEP_MS = (INITIAL_TIME_MS - MIN_TIME_MS) / MAX_LEVEL; 
+    const LEVEL_DURATION_MS = 5000;
+    let currentSpeedTime = INITIAL_TIME_MS; 
+    const BASE_SCORE = 100; 
+    const GAME_AREA_HEIGHT = 450; 
+    const TILE_HEIGHT = 50; const HIT_ZONE_HEIGHT = 60; 
+    const HIT_ZONE_TOP = GAME_AREA_HEIGHT - HIT_ZONE_HEIGHT;
+    const LEADERBOARD_SIZE = 5;
+
+    const COLOR_PALETTE = ['#8A2BE2', '#3b5998', '#2e8b57', '#ff8c00', '#dc143c', '#ff69b4', '#1e90ff', '#ffd700', '#6a0572', '#00ced1', '#ff9999', '#99ff99', '#9999ff', '#ffcc99', '#ff99cc', '#cc99ff', '#99ffcc', '#ccff99', '#ffff99', '#ffcccc'];
+    const KEY_MAP = { 'A': 0, 'S': 1, 'D': 2, 'F': 3, 'TAB': 3 };
+
+    class Tile {
+        constructor(element, col) { this.element = element; this.col = col; this.state = 'pending'; }
+    }
+
+    // --- PLAYER NAME LOGIC ---
+    function loadPlayerName() {
+        const storedName = localStorage.getItem('phiAmPlayerName');
+        if (storedName) {
+            currentPlayerName = storedName;
+            currentPlayerNameDisplay.textContent = currentPlayerName;
+            playerInfoContainer.style.display = 'flex';
+        }
+    }
+
+    function savePlayerName(name) {
+        currentPlayerName = name;
+        localStorage.setItem('phiAmPlayerName', name);
+        currentPlayerNameDisplay.textContent = currentPlayerName;
+        playerInfoContainer.style.display = 'flex';
+    }
+
+
+    // --- LEADERBOARD LOGIC ---
+    function loadLeaderboard() {
+        const storedLeaderboard = localStorage.getItem('phiAmLeaderboard');
+        leaderboardData = storedLeaderboard ? JSON.parse(storedLeaderboard) : [];
+        displayLeaderboard();
+    }
+
+    function saveLeaderboard() { localStorage.setItem('phiAmLeaderboard', JSON.stringify(leaderboardData)); }
+
+    function displayLeaderboard() {
+        leaderboardList.innerHTML = '';
+        if (leaderboardData.length === 0) {
+            leaderboardList.innerHTML = `<li class="leaderboard-item" style="justify-content: center; color: #aaa;">Chưa có ai trên bảng xếp hạng!</li>`;
+            return;
+        }
+
+        leaderboardData.forEach((entry, index) => {
+            const li = document.createElement('li');
+            li.className = 'leaderboard-item';
+            
+            let rankClass = 'rank-other';
+            if (index === 0) rankClass = 'rank-1';
+            else if (index === 1) rankClass = 'rank-2';
+            else if (index === 2) rankClass = 'rank-3';
+
+            let rankContent = index + 1;
+            if (index < 3) {
+                 rankContent = `<svg class="icon-trophy" fill="currentColor" viewBox="0 0 20 20"><path d="M17.414 4.586a2 2 0 00-2.828 0L13 6.172V4a2 2 0 00-2-2H9a2 2 0 00-2 2v2.172L5.414 4.586a2 2 0 00-2.828 2.828L4 9.828V15a2 2 0 002 2h8a2 2 0 002-2V9.828l1.414-1.414a2 2 0 000-2.828zM8 4h4v2H8V4zm6 11H6V9.828l-2-2V15a4 4 0 004 4h4a4 4 0 004-4V7.828l-2 2V15z"></path></svg>`;
+            }
+
+            li.innerHTML = `<span class="leaderboard-rank ${rankClass}">${rankContent}</span><span class="leaderboard-name">${entry.name}</span><span class="leaderboard-score">${entry.score}</span>`;
+            leaderboardList.appendChild(li);
+        });
+    }
+
+    function checkAndAddToLeaderboard(newScore) {
+        const lowestScore = leaderboardData.length < LEADERBOARD_SIZE ? 0 : leaderboardData[LEADERBOARD_SIZE - 1].score;
+        if (newScore > 0 && newScore >= lowestScore) {
+            nameModalTitle.textContent = '🎉 ĐIỂM CAO MỚI! 🎉';
+            playerNameInput.value = currentPlayerName; // Pre-fill name
+            nameModal.dataset.context = 'highScore';
+            nameModal.style.display = 'flex';
+            playerNameInput.focus();
+            return true;
+        }
+        return false;
+    }
+
+    function handleNameSubmit() {
+        const playerName = playerNameInput.value.trim();
+        if (!playerName) { alert('Vui lòng nhập tên của bạn!'); return; }
+
+        savePlayerName(playerName);
+
+        if (nameModal.dataset.context === 'highScore') {
+            leaderboardData.push({ name: playerName, score: score });
+            leaderboardData.sort((a, b) => b.score - a.score);
+            leaderboardData = leaderboardData.slice(0, LEADERBOARD_SIZE);
+            saveLeaderboard();
+            displayLeaderboard();
+            showGameOverModal(false, "Điểm của bạn đã được lưu!");
+        }
+
+        nameModal.style.display = 'none';
+        playerNameInput.value = '';
+    }
+    
+    // --- PERSONAL BEST SCORE LOGIC ---
+    function loadBestScore() {
+        const storedScore = localStorage.getItem('rhythmTilesBestScore');
+        bestScore = storedScore ? parseInt(storedScore, 10) : 0;
+        bestScoreDisplay.textContent = bestScore;
+    }
+
+    function saveBestScore(newScore) {
+        if (newScore > bestScore) {
+            bestScore = newScore;
+            localStorage.setItem('rhythmTilesBestScore', bestScore);
+            bestScoreDisplay.textContent = bestScore;
+        }
+    }
+
+    // --- GAME LOGIC ---
+    function updateDisplay() {
+        currentLevelDisplay.textContent = `${currentLevel + 1} / ${MAX_LEVEL + 1}`;
+        speedDisplay.textContent = (currentSpeedTime / 1000).toFixed(1) + 's';
+        const colorIndex = Math.floor(currentLevel * COLOR_PALETTE.length / (MAX_LEVEL + 1));
+        document.documentElement.style.setProperty('--tile-color', COLOR_PALETTE[colorIndex]);
+        const HUE_START = 260, HUE_END = 180;
+        const currentHue = HUE_START - (currentLevel / MAX_LEVEL) * (HUE_START - HUE_END);
+        document.documentElement.style.setProperty('--background-color-var', `hsl(${currentHue}, 40%, 10%)`);
+        document.documentElement.style.setProperty('--hit-zone-color', `hsla(${currentHue}, 80%, 50%, 0.8)`);
+    }
+
+    function increaseSpeed() {
+        if (currentLevel < MAX_LEVEL) {
+            currentLevel++;
+            currentSpeedTime = INITIAL_TIME_MS - (currentLevel * TIME_STEP_MS);
+            clearInterval(tileGenerationInterval);
+            tileGenerationInterval = setInterval(createTile, currentSpeedTime / 3.5);
+            updateDisplay();
+        }
+    }
+
+    function startLevelTimer() {
+        clearInterval(levelTimer);
+        levelTimer = setInterval(() => { if (isPlaying) increaseSpeed(); }, LEVEL_DURATION_MS);
+    }
+
+    function createTile() {
+        if (!isPlaying) return;
+        if (Math.random() > (0.7 + (currentLevel * 0.01))) return;
+        let colIndex = Math.floor(Math.random() * 4);
+        const tileElement = document.createElement('div');
+        const newTile = new Tile(tileElement, colIndex);
+        tileElement.className = `tile col-${colIndex}`;
+        tileElement.style.transition = `top ${currentSpeedTime / 1000}s linear`;
+        gameArea.appendChild(tileElement);
+        activeTiles.push(newTile);
+        setTimeout(() => { tileElement.style.top = `${GAME_AREA_HEIGHT}px`; }, 50);
+        setTimeout(() => { if (newTile.state === 'pending') handleMiss(newTile); }, currentSpeedTime + 100);
+    }
+
+    function handleMiss(tile) {
+        if (!isPlaying || tile.state !== 'pending') return;
+        tile.state = 'missed';
+        tile.element.style.backgroundColor = '#e94560';
+        combo = 0; comboDisplay.textContent = combo;
+        setTimeout(() => { tile.element.remove(); activeTiles = activeTiles.filter(t => t !== tile); }, 500);
+        gameOver(true, "Bạn đã miss một phím!", true);
+    }
+
+    function handleInitialHit(tile) {
+        if (tile.element.offsetTop < HIT_ZONE_TOP - (TILE_HEIGHT * 1.5)) {
+            gameOver(true, "Bạn đã nhấn phím quá sớm!", true); return;
+        }
+        score += BASE_SCORE + (combo * 5); combo++;
+        scoreDisplay.textContent = Math.round(score);
+        comboDisplay.textContent = combo;
+        tile.state = 'hit';
+        tile.element.style.backgroundColor = '#ffffff';
+        setTimeout(() => { tile.element.remove(); activeTiles = activeTiles.filter(t => t !== tile); }, 100);
+    }
+    
+    function handleKeyInput(event) {
+        const key = event.key.toUpperCase();
+        if (event.repeat || keyPressStatus[key]) return;
+        keyPressStatus[key] = true;
+        if (key === 'E') {
+            event.preventDefault();
+            if (!isPlaying && gameOverModal.style.display !== 'none') resetToMenu();
+            return;
+        }
+        const colIndex = KEY_MAP[key];
+        if (colIndex === undefined || !isPlaying) return;
+        event.preventDefault();
+        const keyBtn = document.querySelector(`.key-btn[data-key="${(key === 'TAB') ? 'F' : key}"]`);
+        if (keyBtn) keyBtn.classList.add('active');
+        const targetTile = activeTiles.find(t => t.col === colIndex && t.state === 'pending' && (t.element.offsetTop + t.element.offsetHeight) >= HIT_ZONE_TOP);
+        if (targetTile) handleInitialHit(targetTile);
+        else gameOver(true, "Bạn đã nhấn phím thừa!", true);
+    }
+
+    function handleKeyRelease(event) {
+        const key = event.key.toUpperCase();
+        keyPressStatus[key] = false;
+        const keyBtn = document.querySelector(`.key-btn[data-key="${(key === 'TAB') ? 'F' : key}"]`);
+        if (keyBtn) keyBtn.classList.remove('active');
+    }
+
+    function gameOver(isMiss, message, shouldRestartMusic = false) {
+        isPlaying = false;
+        clearInterval(tileGenerationInterval); clearInterval(levelTimer);
+        backgroundMusic.pause(); backgroundMusic.onended = null;
+        saveBestScore(score);
+        if (shouldRestartMusic) backgroundMusic.currentTime = 0;
+        if (checkAndAddToLeaderboard(score)) return;
+        showGameOverModal(isMiss, message);
+    }
+
+    function showGameOverModal(isMiss, message) {
+        finalScoreDisplay.textContent = Math.round(score);
+        modalBestScoreDisplay.textContent = bestScore;
+        modalMessage.textContent = message + " (Nhấn phím E hoặc nút TRỞ VỀ MENU)";
+        modalTitle.textContent = isMiss ? "GAME OVER! 💔" : "HOÀN THÀNH BÀI HÁT! 🎉";
+        gameOverModal.style.display = 'flex';
+    }
+
+    function startGame() {
+        score = 0; combo = 0; currentLevel = 0;
+        currentSpeedTime = INITIAL_TIME_MS;
+        isPlaying = true;
+        scoreDisplay.textContent = score; comboDisplay.textContent = combo;
+        updateDisplay();
+        
+        startButton.style.display = 'none';
+        playerInfoContainer.style.display = 'none';
+        leaderboardContainer.style.display = 'none';
+        gameContainer.style.display = 'block';
+        keyDisplay.style.display = 'flex';
+        keyHint.style.display = 'block';
+        
+        gameArea.innerHTML = '<div class="hit-zone"></div>';
+        activeTiles = [];
+
+        tileGenerationInterval = setInterval(createTile, currentSpeedTime / 3.5);
+        startLevelTimer();
+        backgroundMusic.currentTime = 0;
+        backgroundMusic.play().catch(e => console.warn("Lỗi tự động phát nhạc."));
+        backgroundMusic.onended = () => { if (isPlaying) gameOver(false, "Bạn đã hoàn thành bài nhạc!"); };
+    }
+    
+    function resetToMenu() {
+        gameOverModal.style.display = 'none';
+        nameModal.style.display = 'none';
+        startButton.style.display = 'block';
+        if (currentPlayerName) playerInfoContainer.style.display = 'flex';
+        leaderboardContainer.style.display = 'block';
+        gameContainer.style.display = 'none';
+        keyDisplay.style.display = 'none';
+        keyHint.style.display = 'none';
+        displayLeaderboard();
+    }
+
+    // --- INITIALIZATION & EVENT LISTENERS ---
+    window.addEventListener('load', () => {
+        loadBestScore();
+        loadLeaderboard();
+        loadPlayerName();
+        resetToMenu();
+    });
+    
+    startButton.addEventListener('click', startGame);
+    restartButton.addEventListener('click', resetToMenu);
+    closeGameOverButton.addEventListener('click', resetToMenu);
+
+    changeNameButton.addEventListener('click', () => {
+        nameModalTitle.textContent = '📝 ĐỔI TÊN NGƯỜI CHƠI 📝';
+        playerNameInput.value = currentPlayerName;
+        nameModal.dataset.context = 'changeName';
+        nameModal.style.display = 'flex';
+        playerNameInput.focus();
+    });
+
+    closeNameModalButton.addEventListener('click', () => {
+        nameModal.style.display = 'none';
+        if (nameModal.dataset.context === 'highScore') {
+            showGameOverModal(false, "Bạn đã không lưu điểm vào BXH!");
+        }
+    });
+    
+    submitNameButton.addEventListener('click', handleNameSubmit);
+    playerNameInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') handleNameSubmit(); });
+
+    document.querySelectorAll('.key-btn').forEach(btn => {
+        const keyChar = btn.dataset.key;
+        const handleDown = (e) => {
+            if (e.type.startsWith('touch')) e.preventDefault();
+            handleKeyInput({ key: keyChar, preventDefault: () => {}, repeat: false });
+        };
+        const handleUp = (e) => {
+             if (e.type.startsWith('touch')) e.preventDefault();
+             handleKeyRelease({ key: keyChar });
+        };
+        btn.addEventListener('mousedown', handleDown); btn.addEventListener('mouseup', handleUp);
+        btn.addEventListener('touchstart', handleDown, { passive: false });
+        btn.addEventListener('touchend', handleUp, { passive: false });
+    });
+
+    document.addEventListener('keydown', handleKeyInput);
+    document.addEventListener('keyup', handleKeyRelease);
+
+</script>
+</body>
+</html>
+

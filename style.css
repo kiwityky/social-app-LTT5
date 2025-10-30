@@ -389,3 +389,20 @@ input::placeholder {
   overflow-y: auto;
   margin-bottom: -15px;
 }
+#search-box {
+  background-color: #0b1733 !important; /* xanh đen */
+  color: white !important;
+  border: 1px solid #1b3f7b;
+}
+
+#search-box input {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #1b3f7b;
+}
+
+#search-submit {
+  background-color: #b8c6e0 !important;
+  color: #000000 !important;
+  border: 1px solid #0b1733 !important;
+}

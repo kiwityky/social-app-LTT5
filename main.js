@@ -230,3 +230,36 @@ try {
   console.error("Lỗi khởi tạo ứng dụng:", error);
   try { if (DOM && DOM.authStatusEl) DOM.authStatusEl.textContent = "Lỗi khởi tạo. Kiểm tra console."; } catch(e){}
 }
+  // ===== NÚT GAME =====
+  const gameBtn = document.getElementById('open-game-btn');
+  if (gameBtn) {
+    gameBtn.addEventListener('click', () => {
+      window.location.href = 'game.html';
+    });
+  }
+
+  // ===== NÚT TÌM KIẾM =====
+  const searchBtn = document.getElementById('search-btn');
+  const searchBox = document.getElementById('search-box');
+  const searchInput = document.getElementById('search-input');
+  const searchSubmit = document.getElementById('search-submit');
+
+  if (searchBtn && searchBox) {
+    searchBtn.addEventListener('click', () => {
+      searchBox.classList.toggle('hidden');
+      searchInput.focus();
+    });
+  }
+
+  if (searchSubmit) {
+    searchSubmit.addEventListener('click', () => {
+      const keyword = searchInput.value.trim().toLowerCase();
+      if (!keyword) return alert("Nhập từ khóa để tìm kiếm video.");
+      const posts = Array.from(document.querySelectorAll('.video-snap-item'));
+      posts.forEach(p => {
+        const title = p.querySelector('h4')?.textContent.toLowerCase() || "";
+        const desc = p.querySelector('p')?.textContent.toLowerCase() || "";
+        p.style.display = (title.includes(keyword) || desc.includes(keyword)) ? '' : 'none';
+      });
+    });
+  }

@@ -1,155 +1,364 @@
 /* ===========================
-   FONT VÀ CẤU TRÚC CHUNG
+   FONT & BIẾN MÀU CHỦ ĐẠO
 =========================== */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tangerine:wght@700&display=swap');
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #f7f9fb;
-    color: #1a202c;
-    padding-bottom: 0; /* Video chiếm toàn màn hình */
-    overflow-y: hidden; /* Ngăn cuộn toàn trang */
+:root {
+  --primary-color: #102951;
+  --primary-dark: #0d1e3a;
+  --accent-color: #1b3f7b;
+  --text-light: #ffffff;
 }
 
 /* ===========================
-   NÚT CHÍNH (Login / Upload)
+   CẤU TRÚC CHUNG
+=========================== */
+body {
+  font-family: 'Inter', sans-serif;
+  background: #0b1733;
+  color: var(--text-light);
+  overflow-y: hidden;
+}
+
+/* ===========================
+   HEADER — GRADIENT XANH DA TRỜI
+=========================== */
+header {
+  background: linear-gradient(135deg, #b3e5fc 0%, #81d4fa 40%, #4fc3f7 70%, #0288d1 100%);
+  border-bottom: 3px solid #0277bd;
+  color: var(--text-light);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(3px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Ánh sáng quét nhẹ dưới viền */
+header::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: -30%;
+  width: 60%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: silverLine 6s linear infinite;
+}
+
+@keyframes silverLine {
+  0% { left: -30%; opacity: 0.4; }
+  50% { left: 70%; opacity: 0.8; }
+  100% { left: 110%; opacity: 0.4; }
+}
+
+/* Logo và tiêu đề */
+header h1 {
+  color: var(--text-light) !important;
+  font-weight: 800;
+  letter-spacing: 1px;
+  font-size: 2.5rem;
+  display: flex;
+  align-items: baseline;
+}
+
+/* Logo */
+header img {
+  background-color: white;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+}
+header img:hover { transform: scale(1.15); }
+
+/* Trạng thái đăng nhập */
+header #auth-status {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e0f7fa;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+/* ===========================
+   DỊCH NÚT "ĐĂNG XUẤT" TRÁI NHẸ, KHÔNG VIỀN TRẮNG
+=========================== */
+header #auth-status {
+  position: absolute;
+  top: 50%;
+  right: 0px; /* 👈 Dịch trái một chút (tùy chỉnh 25–40px tùy anh muốn) */
+  transform: translateY(-50%);
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+header #auth-status button {
+  appearance: none !important;
+  background: linear-gradient(135deg, #0277bd, #01579b) !important;
+  border: none !important;
+  outline: none !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  padding: 8px 18px !important;
+  cursor: pointer !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Khi hover — sáng hơn chút, không viền trắng */
+header #auth-status button:hover {
+  background: linear-gradient(135deg, #039be5, #0277bd) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Xóa hoàn toàn mọi outline khi focus/active */
+header #auth-status button:focus,
+header #auth-status button:active,
+header #auth-status button:focus-visible {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ===========================
+   LOGO — CHỮ "LTT FINE"
+=========================== */
+header h1 span {
+  font-family: 'Tangerine', cursive !important;
+  font-size: 2.2rem !important;
+  font-weight: 700 !important;
+  margin-left: 1px !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
+  text-shadow:
+    0 0 6px rgba(255, 255, 255, 0.3),
+    0 0 12px rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+/* ===========================
+   NÚT CHÍNH
 =========================== */
 .btn-primary {
-    background-color: #1e293b; 
-    color: white;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    transition: background-color 0.3s ease, transform 0.1s ease;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: var(--primary-color);
+  color: var(--text-light);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.25);
 }
 .btn-primary:hover {
-    background-color: #0f172a; 
-    transform: translateY(-1px);
+  background-color: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 /* ===========================
    KHUNG VIDEO CHÍNH
 =========================== */
 #video-feed-container {
-    height: calc(100vh - 120px);
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    -webkit-overflow-scrolling: touch;
-    max-width: 420px;
-    margin: auto;
-    border-left: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
+  height: calc(100vh - 120px);
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  max-width: 420px;
+  margin: auto;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
 }
-
 .video-snap-item {
-    scroll-snap-align: start;
-    height: 100%;
-    min-height: 100%;
-    background-color: black;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  scroll-snap-align: start;
+  height: 100%;
+  background-color: black;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-
 .video-display {
-    width: 100%;
-    height: 100%;
-    max-height: 75vh;
-    max-width: 100%;
+  width: 100%;
+  height: 100%;
+  max-height: 75vh;
+  object-fit: contain;
 }
 
 /* ===========================
-   SPINNER LOADING
-=========================== */
-.spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-top: 4px solid #1e293b;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* ===========================
-   THANH ĐIỀU HƯỚNG DƯỚI CÙNG
-=========================== */
-#bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 1000;
-    background-color: white;
-    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* ===========================
-   CỤM ĐIỀU KHIỂN VIDEO
-   (Volume - Like - Share)
+   VIDEO CONTROL ICONS
 =========================== */
 .video-controls {
-    position: absolute;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    z-index: 20;
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  z-index: 20;
 }
-
-/* Nút điều khiển chung */
 .ctrl-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
-.ctrl-btn:hover {
-    background: rgba(255, 255, 255, 0.9);
-    transform: scale(1.1);
-}
+.ctrl-btn:hover { background: rgba(255, 255, 255, 1); transform: scale(1.1); }
+.ctrl-btn img { width: 22px; height: 22px; pointer-events: none; }
 
-/* Icon trong nút */
-.ctrl-btn img, .ctrl-btn span {
-    width: 22px;
-    height: 22px;
-    pointer-events: none;
-}
-
-/* Trạng thái "liked" */
-.like-btn.liked span {
-    color: red;
-    filter: drop-shadow(0 0 6px rgba(255,0,0,0.5));
-    transform: scale(1.1);
-}
 .like-btn.liked {
-    box-shadow: 0 4px 10px rgba(255, 0, 0, 0.3);
+  background: #ff4b4b;
+  box-shadow: 0 0 8px rgba(255, 75, 75, 0.6);
+}
+.like-count, .share-count {
+  color: white;
+  font-size: 12px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* ===========================
-   CHỮ HIỂN THỊ SỐ LIKE/SHARE
+   NAV DƯỚI — GRADIENT XANH DA TRỜI
 =========================== */
-.like-count, .share-count {
-    color: white;
-    font-size: 12px;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-    margin-top: -2px;
+#bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, #99dcfc 0%, #81d4fa 40%, #4fc3f7 70%, #0288d1 100%);
+  color: var(--text-light);
+  border-top: 3px solid #0277bd;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0.6rem 0;
 }
-header img {
-    transition: transform 0.2s ease;
+
+/* Hiệu ứng ánh sáng bạc quét */
+#bottom-nav::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -30%;
+  width: 60%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.8) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: silverSweep 6s linear infinite;
 }
-header img:hover {
-    transform: scale(1.5);
+@keyframes silverSweep {
+  0% { left: -30%; opacity: 0.4; }
+  50% { left: 70%; opacity: 0.8; }
+  100% { left: 110%; opacity: 0.4; }
+}
+
+#bottom-nav button {
+  color: #e1f5fe;
+  background: none;
+  border: none;
+  outline: none;
+  transition: all 0.2s ease;
+}
+#bottom-nav button:hover { color: #ffffff; transform: scale(1.15); }
+
+/* ===========================
+   SPINNER
+=========================== */
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top: 4px solid var(--accent-color);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===========================
+   INPUT FILE
+=========================== */
+input[type="file"] {
+  background-color: #f8faff;
+  color: #000;
+  border: 1px solid #c5d3f6;
+  border-radius: 10px;
+  padding: 8px;
+  font-size: 0.95rem;
+}
+input[type="file"]::file-selector-button {
+  background: linear-gradient(135deg, #102951, #1b3f7b);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+input[type="file"]::file-selector-button:hover {
+  background: #0d1e3a;
+  transform: scale(1.03);
+}
+
+/* ===========================
+   MODALS
+=========================== */
+#post-modal .bg-white,
+#recommend-modal .bg-white {
+  background: #f0f4ff;
+  border: 1px solid #c5d3f6;
+  border-radius: 12px;
+}
+/* ===========================
+   INPUT FORM — ĐĂNG NHẬP / MẬT KHẨU DARK MODE
+=========================== */
+input[type="email"],
+input[type="password"] {
+  background-color: #ffffff; /* nền đen mịn */
+  color: #000000; /* chữ trắng rõ */
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  transition: all 0.25s ease;
+}
+
+/* Khi rê chuột vào input */
+input[type="email"]:hover,
+input[type="password"]:hover {
+  border-color: #4fc3f7; /* xanh nhạt đồng bộ header */
+}
+
+/* Khi focus (đang nhập) */
+input[type="email"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border-color: #81d4fa;
+  box-shadow: 0 0 8px rgba(129, 212, 250, 0.4);
+  background-color: #ffffff; /* đen sáng nhẹ hơn khi focus */
+}
+
+/* Placeholder (chữ gợi ý) */
+input::placeholder {
+  color: #9ca3af; /* xám nhạt dễ nhìn */
+  opacity: 1;
 }

@@ -431,3 +431,6 @@ input::placeholder {
   transform: scale(1.15);
   text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
 }
+#game-center-modal .bg-white {
+  margin-top: -70px; /* di chuyển lên trên khoảng 30px */
+}

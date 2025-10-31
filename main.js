@@ -1,4 +1,5 @@
-// main.js — phiên bản hoàn chỉnh mới nhất (Firebase v11 chuẩn)
+// main.js — phiên bản hoàn chỉnh hiển thị ngày rõ ràng cho lịch sử điểm
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { 
   getAuth, 
@@ -11,7 +12,11 @@ import {
   collection, 
   doc, 
   getDoc, 
-  setDoc 
+  getDocs,
+  setDoc, 
+  updateDoc, 
+  arrayUnion,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { 
   getStorage, 
@@ -20,7 +25,7 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-import { firebaseConfig, getDOMElements } from './config.js';
+import { firebaseConfig, getDOMElements, GEMINI_API_KEY, GEMINI_API_URL } from './config.js';
 import { setupAuthListeners, getUserId } from './auth.js';
 import { loadPosts, setupVideoListeners } from './video-feed.js';
 
@@ -29,7 +34,6 @@ const DOM = getDOMElements();
 let app, db, auth, storage;
 
 try {
-  // ===== KHỞI TẠO FIREBASE =====
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
@@ -37,44 +41,17 @@ try {
 
   DOM.authStatusEl.textContent = "Đang tải...";
 
-  // ===== KHAI BÁO COLLECTION VIDEO =====
   const getPostsCollectionRef = () => collection(db, `artifacts/${firebaseConfig.projectId}/public/data/videos`);
-
-  // ===== THIẾT LẬP LISTENER CHÍNH =====
   setupAuthListeners(auth, DOM, (userId) => loadPosts(db, DOM, getPostsCollectionRef));
   setupVideoListeners(DOM, { db, storage, getPostsCollectionRef, getUserId });
 
-  // ===== NÚT BẬT GESTURE CONTROL (NẾU CÓ) =====
-  const gestureBtn = document.getElementById('toggle-gesture-btn');
-  if (gestureBtn) {
-    let gestureEnabled = false;
-    gestureBtn.addEventListener('click', async () => {
-      if (!gestureEnabled) {
-        gestureBtn.textContent = "🖐️ Đang bật điều khiển cử chỉ...";
-        gestureBtn.disabled = true;
-        if (typeof initGestureControl !== 'undefined') {
-          try { await initGestureControl(DOM.videoFeedContainer); }
-          catch(e) { console.warn("initGestureControl lỗi:", e); }
-        }
-        gestureBtn.textContent = "🖐️ Tắt điều khiển cử chỉ";
-        gestureBtn.disabled = false;
-        gestureEnabled = true;
-      } else {
-        location.reload();
-      }
-    });
-  }
-
-  // =============================
-  // ===== PROFILE NGƯỜI DÙNG ====
-  // =============================
+  // ========================= PROFILE =========================
   const profileBtn = document.getElementById('open-profile-btn');
   const profileModal = document.getElementById('profile-modal');
   const profileForm = document.getElementById('profile-form');
   const avatarUpload = document.getElementById('avatar-upload');
   const avatarImg = document.getElementById('profile-avatar');
 
-  // ===== THÔNG BÁO GIỮA MÀN HÌNH =====
   function showProfileMessage(text, isSuccess = true) {
     let toast = document.getElementById('center-toast');
     if (!toast) {
@@ -94,15 +71,10 @@ try {
     toast._timeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
   }
 
-  // ===== MỞ MODAL HỒ SƠ =====
   if (profileBtn) {
     profileBtn.addEventListener('click', async () => {
       const user = auth.currentUser;
-      if (!user) {
-        alert("Vui lòng đăng nhập trước.");
-        return;
-      }
-
+      if (!user) return alert("Vui lòng đăng nhập trước.");
       profileModal?.classList.remove('hidden');
       profileModal?.classList.add('flex');
 
@@ -116,19 +88,19 @@ try {
 
         if (snap.exists()) {
           const data = snap.data();
-          if (nameEl) nameEl.textContent = data.name || user.email || "";
-          if (emailEl) emailEl.textContent = data.email || user.email || "";
-          if (nameInput) nameInput.value = data.name || "";
-          if (emailInput) emailInput.value = data.email || user.email || "";
-          if (document.getElementById('profile-dob')) document.getElementById('profile-dob').value = data.dob || '';
-          if (document.getElementById('profile-gender')) document.getElementById('profile-gender').value = data.gender || '';
-          if (document.getElementById('profile-school')) document.getElementById('profile-school').value = data.school || '';
-          if (document.getElementById('profile-class')) document.getElementById('profile-class').value = data.class || '';
-          if (avatarImg) avatarImg.src = data.photoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+          nameEl.textContent = data.name || user.email || "";
+          emailEl.textContent = data.email || user.email || "";
+          nameInput.value = data.name || "";
+          emailInput.value = data.email || user.email || "";
+          document.getElementById('profile-dob').value = data.dob || '';
+          document.getElementById('profile-gender').value = data.gender || '';
+          document.getElementById('profile-school').value = data.school || '';
+          document.getElementById('profile-class').value = data.class || '';
+          avatarImg.src = data.photoUrl || "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
         } else {
-          if (nameEl) nameEl.textContent = user.email || "Chưa có thông tin";
-          if (emailEl) emailEl.textContent = user.email || "";
-          if (avatarImg) avatarImg.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
+          nameEl.textContent = user.email || "Chưa có thông tin";
+          emailEl.textContent = user.email || "";
+          avatarImg.src = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png";
         }
       } catch (err) {
         console.error("Lỗi tải profile:", err);
@@ -137,40 +109,26 @@ try {
     });
   }
 
-  // ===== LƯU HỒ SƠ =====
   if (profileForm) {
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const user = auth.currentUser;
       if (!user) return showProfileMessage("Vui lòng đăng nhập.", false);
 
-      const data = {};
-      const dobEl = document.getElementById('profile-dob');
-      if (dobEl?.value.trim()) data.dob = dobEl.value.trim();
-
-      const genderEl = document.getElementById('profile-gender');
-      if (genderEl?.value) data.gender = genderEl.value;
-
-      const schoolEl = document.getElementById('profile-school');
-      if (schoolEl?.value.trim()) data.school = schoolEl.value.trim();
-
-      const classEl = document.getElementById('profile-class');
-      if (classEl?.value.trim()) data.class = classEl.value.trim();
-
-      const nameInput = document.getElementById('profile-name-input');
-      if (nameInput?.value.trim()) data.name = nameInput.value.trim();
-
-      const emailInput = document.getElementById('profile-email-input');
-      if (emailInput?.value.trim()) data.email = emailInput.value.trim(); // chỉ lưu hiển thị
+      const name = document.getElementById('profile-name-input').value.trim();
+      const email = document.getElementById('profile-email-input').value.trim();
+      const dob = document.getElementById('profile-dob').value.trim();
+      const gender = document.getElementById('profile-gender').value;
+      const school = document.getElementById('profile-school').value.trim();
+      const className = document.getElementById('profile-class').value.trim();
 
       try {
-        await setDoc(doc(db, 'users', user.uid), data, { merge: true });
+        await setDoc(doc(db, 'users', user.uid), {
+          name, email, dob, gender, school, class: className
+        }, { merge: true });
         showProfileMessage("Đã lưu thông tin thành công!");
-        // Cập nhật UI ngay
-        const nameDisplay = document.getElementById('profile-name');
-        const emailDisplay = document.getElementById('profile-email');
-        if (nameDisplay && data.name) nameDisplay.textContent = data.name;
-        if (emailDisplay && data.email) emailDisplay.textContent = data.email;
+        document.getElementById('profile-name').textContent = name;
+        document.getElementById('profile-email').textContent = email;
       } catch (err) {
         console.error("Lỗi lưu profile:", err);
         showProfileMessage("Không thể lưu. Thử lại.", false);
@@ -178,34 +136,31 @@ try {
     });
   }
 
-  // ===== ĐỔI MẬT KHẨU =====
   const changePassBtn = document.getElementById('change-password-btn');
   if (changePassBtn) {
     changePassBtn.addEventListener('click', async () => {
       const newPassEl = document.getElementById('profile-new-password');
-      const newPass = newPassEl?.value.trim();
+      const newPass = newPassEl.value.trim();
       const user = auth.currentUser;
       if (!user) return showProfileMessage("Vui lòng đăng nhập.", false);
-      if (!newPass || newPass.length < 6) return showProfileMessage("Mật khẩu phải từ 6 ký tự.", false);
+      if (newPass.length < 6) return showProfileMessage("Mật khẩu phải từ 6 ký tự.", false);
 
       try {
         const oldPass = prompt("Nhập lại mật khẩu hiện tại để xác nhận:");
         if (!oldPass) throw new Error("Chưa nhập mật khẩu hiện tại.");
         const credential = EmailAuthProvider.credential(user.email, oldPass);
         await reauthenticateWithCredential(user, credential);
-
         await updatePassword(user, newPass);
         newPassEl.value = '';
         showProfileMessage("Đã đổi mật khẩu thành công!");
       } catch (err) {
         console.error("Lỗi đổi mật khẩu:", err);
-        showProfileMessage("Không thể đổi mật khẩu. Vui lòng nhập đúng mật khẩu hiện tại.", false);
+        showProfileMessage("Không thể đổi mật khẩu.", false);
       }
     });
   }
 
-  // ===== UPLOAD AVATAR =====
-  if (avatarUpload && avatarImg) {
+  if (avatarUpload) {
     avatarUpload.addEventListener('change', async (e) => {
       const user = auth.currentUser;
       if (!user) return showProfileMessage("Vui lòng đăng nhập.", false);
@@ -221,25 +176,17 @@ try {
         showProfileMessage("Đã cập nhật ảnh đại diện!");
       } catch (err) {
         console.error("Lỗi upload avatar:", err);
-        showProfileMessage("Không thể tải ảnh. Thử lại.", false);
+        showProfileMessage("Không thể tải ảnh.", false);
       }
     });
   }
 
 } catch (error) {
   console.error("Lỗi khởi tạo ứng dụng:", error);
-  try { if (DOM && DOM.authStatusEl) DOM.authStatusEl.textContent = "Lỗi khởi tạo. Kiểm tra console."; } catch(e){}
 }
-  // ===== NÚT GAME =====
-  const gameBtn = document.getElementById('open-game-btn');
-  if (gameBtn) {
-    gameBtn.addEventListener('click', () => {
-      //window.location.href = 'game.html';
-    });
-  }
-// ===============================
-// MỞ MODAL TRUNG TÂM TRÒ CHƠI
-// ===============================
+
+// =============================== GAME CENTER ===============================
+const gameBtn = document.getElementById('open-game-btn');
 if (gameBtn) {
   gameBtn.addEventListener('click', async () => {
     const modal = document.getElementById('game-center-modal');
@@ -249,18 +196,52 @@ if (gameBtn) {
   });
 }
 
-// ===============================
-// TÍNH VÀ TẢI BẢNG XẾP HẠNG
-// ===============================
+// Hàm tính điểm
+function calculateDailyScore(data) {
+  const usageMinutes = data.usageMinutesToday || 0;
+  const videosCount = data.videosCount || 0;
+  const lostVideos = data.lostVideos || 0;
+  let score = data.baseScore || 0;
+  if (usageMinutes <= 45) score += 1; else score -= 1;
+  score += videosCount;
+  score -= lostVideos;
+  return score;
+}
+
+// Hàm format ngày chuẩn
+function formatHistoryDate(d) {
+  if (!d) return 'Không rõ ngày';
+  if (typeof d.toDate === 'function') return d.toDate().toLocaleString('vi-VN');
+  if (d.seconds) return new Date(d.seconds * 1000).toLocaleString('vi-VN');
+  if (typeof d === 'string') return d;
+  try { return String(d); } catch { return 'Không rõ ngày'; }
+}
+
+// Ghi lịch sử điểm mới
+async function addScoreHistory(userId, change, reason = '') {
+  if (!userId) return;
+  const userRef = doc(db, 'users', userId);
+  try {
+    await updateDoc(userRef, {
+      scoreHistory: arrayUnion({
+        date: serverTimestamp(),
+        change,
+        reason
+      })
+    });
+  } catch (err) {
+    console.error("Lỗi addScoreHistory:", err);
+  }
+}
+
+// Bảng xếp hạng người dùng
 async function loadUserLeaderboard() {
   const listEl = document.getElementById('user-leaderboard');
   listEl.innerHTML = `<li class="text-center text-gray-500 py-2">Đang tính điểm...</li>`;
-
   try {
     const usersRef = collection(db, 'users');
     const snapshot = await getDocs(usersRef);
-    let leaderboard = [];
-
+    const leaderboard = [];
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
       const score = calculateDailyScore(data);
@@ -270,57 +251,31 @@ async function loadUserLeaderboard() {
         history: data.scoreHistory || []
       });
     });
-
     leaderboard.sort((a, b) => b.score - a.score);
     listEl.innerHTML = '';
-
     leaderboard.forEach((u, i) => {
       const li = document.createElement('li');
       li.className = 'flex justify-between items-center py-2 px-2 hover:bg-gray-100 rounded cursor-pointer';
-      li.innerHTML = `
-        <span class="font-semibold">${i + 1}. ${u.name}</span>
-        <span class="text-blue-600 font-bold">${u.score} điểm</span>
-      `;
-      li.addEventListener('click', () => showScoreHistory(u));
+      li.innerHTML = `<span class="font-semibold">${i + 1}. ${u.name}</span>
+                      <span class="text-blue-600 font-bold">${u.score} điểm</span>`;
+      //li.addEventListener('click', () => showScoreHistory(u));
       listEl.appendChild(li);
     });
-
-    if (leaderboard.length === 0) {
-      listEl.innerHTML = `<li class="text-center text-gray-500 py-2">Chưa có dữ liệu người dùng.</li>`;
-    }
   } catch (err) {
-    console.error("Lỗi tải BXH:", err);
-    listEl.innerHTML = `<li class="text-center text-red-500 py-2">Lỗi khi tải dữ liệu.</li>`;
+    console.error("Lỗi BXH:", err);
   }
 }
 
-// ===============================
-// HÀM TÍNH ĐIỂM TỔNG
-// ===============================
-function calculateDailyScore(data) {
-  const usageMinutes = data.usageMinutesToday || 0;
-  const videosCount = data.videosCount || 0;
-  const lostVideos = data.lostVideos || 0;
-  let score = data.baseScore || 0;
-
-  // Quy tắc: dưới 45' +1, trên 45' -1
-  if (usageMinutes <= 45) score += 1; else score -= 1;
-
-  // Mỗi video hợp lệ +1, mất video trừ tương ứng
-  score += videosCount;
-  score -= lostVideos;
-
-  // Lưu lại vào lịch sử (có thể lưu Firestore riêng)
-  return score;
-}
-
-// ===============================
-// HIỂN THỊ LỊCH SỬ ĐIỂM
-// ===============================
+// Hiển thị lịch sử điểm
 function showScoreHistory(user) {
   const history = user.history || [];
   const details = history.length
-    ? history.map(h => `<li>${h.date}: ${h.change > 0 ? '+' : ''}${h.change} (${h.reason})</li>`).join('')
+    ? history.map(h => {
+        const date = formatHistoryDate(h?.date);
+        const change = (typeof h?.change === 'number' ? (h.change > 0 ? '+' : '') + h.change : '0');
+        const reason = h?.reason || 'Không rõ lý do';
+        return `<li>${date}: ${change} (${reason})</li>`;
+      }).join('')
     : '<li>Chưa có lịch sử điểm.</li>';
 
   const modal = document.createElement('div');
@@ -336,34 +291,7 @@ function showScoreHistory(user) {
   document.body.appendChild(modal);
 }
 
-  // ===== NÚT TÌM KIẾM =====
-  const searchBtn = document.getElementById('search-btn');
-  const searchBox = document.getElementById('search-box');
-  const searchInput = document.getElementById('search-input');
-  const searchSubmit = document.getElementById('search-submit');
-
-  if (searchBtn && searchBox) {
-    searchBtn.addEventListener('click', () => {
-      searchBox.classList.toggle('hidden');
-      searchInput.focus();
-    });
-  }
-
-  if (searchSubmit) {
-    searchSubmit.addEventListener('click', () => {
-      const keyword = searchInput.value.trim().toLowerCase();
-      if (!keyword) return alert("Nhập từ khóa để tìm kiếm video.");
-      const posts = Array.from(document.querySelectorAll('.video-snap-item'));
-      posts.forEach(p => {
-        const title = p.querySelector('h4')?.textContent.toLowerCase() || "";
-        const desc = p.querySelector('p')?.textContent.toLowerCase() || "";
-        p.style.display = (title.includes(keyword) || desc.includes(keyword)) ? '' : 'none';
-      });
-    });
-  }
-  import { GEMINI_API_KEY, GEMINI_API_URL } from './config.js';
-
-// ===== CHATBOX AI GEMINI =====
+// =============================== CHATBOX GEMINI ===============================
 const logoEl = document.getElementById('sunflower-btn');
 const chatbox = document.getElementById('ai-chatbox');
 const aiInput = document.getElementById('ai-input');
@@ -371,35 +299,22 @@ const aiSend = document.getElementById('ai-send');
 const aiMessages = document.getElementById('ai-messages');
 const aiClose = document.getElementById('close-ai-chat');
 
-// Mở chatbox khi nhấp logo hoa hướng dương
-if (logoEl) {
-  logoEl.addEventListener('click', () => {
-    chatbox.classList.toggle('hidden');
-  });
-}
-
-// Đóng chatbox
+if (logoEl) logoEl.addEventListener('click', () => chatbox.classList.toggle('hidden'));
 if (aiClose) aiClose.addEventListener('click', () => chatbox.classList.add('hidden'));
 
-// Gửi câu hỏi
 if (aiSend) {
   aiSend.addEventListener('click', async () => {
     const question = aiInput.value.trim();
     if (!question) return;
-
     appendMessage('user', question);
     aiInput.value = '';
     appendMessage('bot', 'Đang xử lý...');
-
     try {
       const response = await fetch(GEMINI_API_URL + GEMINI_API_KEY, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ role: "user", parts: [{ text: question }] }]
-        })
+        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: question }] }] })
       });
-
       const data = await response.json();
       const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Xin lỗi, tôi chưa có câu trả lời cho điều đó.";
       updateLastBotMessage(answer);
@@ -412,8 +327,8 @@ if (aiSend) {
 
 function appendMessage(sender, text) {
   const msg = document.createElement('div');
-  msg.className = sender === 'user' 
-    ? 'bg-sky-100 text-gray-800 self-end p-2 rounded-lg max-w-[85%] ml-auto' 
+  msg.className = sender === 'user'
+    ? 'bg-sky-100 text-gray-800 self-end p-2 rounded-lg max-w-[85%] ml-auto'
     : 'bg-gray-200 text-gray-900 p-2 rounded-lg max-w-[85%]';
   msg.textContent = text;
   aiMessages.appendChild(msg);

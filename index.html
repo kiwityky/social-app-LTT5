@@ -12,7 +12,9 @@
     <div id="app" class="relative">
         <header class="bg-white p-4 shadow-lg flex justify-between items-center border-b-4 border-slate-600 fixed top-0 left-0 right-0 z-20 max-w-4xl mx-auto">
             <div class="flex items-center space-x-4">
-    <img src="assets/logo.png" alt="Logo" class="h-16 w-16 object-contain rounded-md shadow-sm">
+    <a href="https://thcslythanhtong.hcm.edu.vn/homegd7" target="_blank" title="Trang chủ Trường THCS Lý Thánh Tông">
+  <img src="assets/logo.png" alt="Logo" class="h-16 w-16 object-contain rounded-md shadow-sm hover:scale-110 transition-transform duration-200">
+</a>
     <h1 class="text-2xl font-extrabold text-slate-800 flex items-center gap-1">
   LTT 
   <span id="sunflower-btn" class="text-lg font-medium text-gray-500 cursor-pointer hover:scale-125 transition-transform duration-200">
@@ -54,46 +56,111 @@
     
 
     <div id="post-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg transform transition-all">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="text-xl font-bold text-slate-700">Đăng Video Mới</h3>
-                <button onclick="closeModal('post-modal')" class="text-gray-400 hover:text-gray-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-            <form id="post-form" class="space-y-4">
-                <input type="text" id="post-title" placeholder="Tiêu đề video (Tối đa 50 ký tự)" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" maxlength="50" required>
-                <textarea type="text" id="post-description" placeholder="Mô tả hoặc nội dung chính (Tối đa 100 ký tự)" rows="2" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500" maxlength="100" required></textarea>
-                
-                <div class="flex items-center space-x-4 border p-3 rounded-lg bg-gray-50">
-                    <label class="font-medium text-gray-700">Chọn nguồn:</label>
-                    <div class="flex items-center">
-                        <input id="source-upload" type="radio" name="video_source" value="upload" checked class="h-4 w-4 text-slate-600 border-gray-300">
-                        <label for="source-upload" class="ml-2 text-sm text-gray-700">Tải File lên</label>
-                    </div>
-                    <div class="flex items-center">
-                        <input id="source-youtube" type="radio" name="video_source" value="youtube" class="h-4 w-4 text-slate-600 border-gray-300">
-                        <label for="source-youtube" class="ml-2 text-sm text-gray-700">Link YouTube</label>
-                    </div>
-                </div>
-
-                <input type="file" id="post-file" accept="video/*" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500">
-                
-                <input type="url" id="post-url" placeholder="Dán URL Video YouTube công khai" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 hidden">
-                
-                <button type="submit" id="upload-btn" class="btn-primary w-full flex items-center justify-center space-x-2">
-                    <div id="upload-spinner" class="spinner hidden mr-2 w-5 h-5 border-t-2"></div>
-                    <span>Đăng Video</span>
-                </button>
-                <p id="post-message" class="text-sm text-center text-red-500"></p>
-                <div id="upload-progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden">
-                    <div id="upload-progress" class="bg-slate-600 h-2.5 rounded-full" style="width: 0%"></div>
-                </div>
-            </form>
-        </div>
+  <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg transform transition-all">
+    <div class="flex justify-between items-center border-b pb-3 mb-4">
+      <h3 class="text-xl font-bold text-slate-700">Đăng Video Mới</h3>
+      <button onclick="closeModal('post-modal')" class="text-gray-400 hover:text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
+
+    <form id="post-form" class="space-y-4">
+      <style>
+        /* Fix triệt để màu chữ & placeholder trong modal đăng video */
+        #post-modal input[type="text"],
+        #post-modal input[type="url"],
+        #post-modal textarea {
+          color: #000 !important;
+          background-color: #fff !important;
+          border: 1px solid #ccc !important;
+          border-radius: 8px !important;
+          padding: 10px !important;
+          font-size: 15px !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
+        #post-modal input::placeholder,
+        #post-modal textarea::placeholder {
+          color: #666 !important;
+        }
+
+        #post-modal input:focus,
+        #post-modal textarea:focus {
+          outline: none !important;
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 5px rgba(59, 130, 246, 0.4) !important;
+        }
+
+        #post-modal label {
+          color: #222 !important;
+        }
+      </style>
+
+      <input
+        type="text"
+        id="post-title"
+        placeholder="Tiêu đề video (Tối đa 50 ký tự)"
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500"
+        maxlength="50"
+        required
+      >
+
+      <textarea
+        id="post-description"
+        placeholder="Mô tả hoặc nội dung chính (Tối đa 100 ký tự)"
+        rows="2"
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500"
+        maxlength="100"
+        required
+      ></textarea>
+
+      <div class="flex items-center space-x-4 border p-3 rounded-lg bg-gray-50">
+        <label class="font-medium text-gray-700">Chọn nguồn:</label>
+        <div class="flex items-center">
+          <input id="source-upload" type="radio" name="video_source" value="upload" checked class="h-4 w-4 text-slate-600 border-gray-300">
+          <label for="source-upload" class="ml-2 text-sm text-gray-700">Tải File lên</label>
+        </div>
+        <div class="flex items-center">
+          <input id="source-youtube" type="radio" name="video_source" value="youtube" class="h-4 w-4 text-slate-600 border-gray-300">
+          <label for="source-youtube" class="ml-2 text-sm text-gray-700">Link YouTube</label>
+        </div>
+      </div>
+
+      <input
+        type="file"
+        id="post-file"
+        accept="video/*"
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500"
+      >
+
+      <input
+        type="url"
+        id="post-url"
+        placeholder="Dán URL Video YouTube công khai"
+        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 hidden"
+      >
+
+      <button
+        type="submit"
+        id="upload-btn"
+        class="btn-primary w-full flex items-center justify-center space-x-2"
+      >
+        <div id="upload-spinner" class="spinner hidden mr-2 w-5 h-5 border-t-2"></div>
+        <span>Đăng Video</span>
+      </button>
+
+      <p id="post-message" class="text-sm text-center text-red-500"></p>
+
+      <div id="upload-progress-container" class="w-full bg-gray-200 rounded-full h-2.5 hidden">
+        <div id="upload-progress" class="bg-slate-600 h-2.5 rounded-full" style="width: 0%"></div>
+      </div>
+    </form>
+  </div>
+</div>
+
 
     <div id="bottom-nav" class="p-3 flex justify-around items-center max-w-4xl mx-auto">
   <!-- Nút Trang chủ -->
@@ -248,7 +315,7 @@
 <div id="game-center-modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center p-4 z-50">
   <div class="bg-white text-gray-800 rounded-2xl shadow-2xl w-full max-w-lg p-6 relative overflow-y-auto max-h-[90vh]">
     <button onclick="closeModal('game-center-modal')" class="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl font-bold">&times;</button>
-    <h2 class="text-2xl font-extrabold text-center mb-4 text-blue-700">🎮 Trung tâm trò chơi</h2>
+    <h2 class="text-2xl font-extrabold text-center mb-4 text-blue-700">🏅 BẢNG VINH DANH</h2>
 
     <!-- BẢNG XẾP HẠNG -->
     <div class="mb-6">
@@ -257,6 +324,16 @@
         <li class="text-gray-500 text-center py-2">Đang tải dữ liệu...</li>
       </ul>
     </div>
+<!-- NGUYÊN TẮC CỘNG TRỪ ĐIỂM -->
+<div class="my-6 p-4 bg-blue-50 border border-blue-200 rounded-xl shadow-inner">
+  <h3 class="text-lg font-bold mb-2 text-blue-700">📘 Nguyên tắc cộng trừ điểm</h3>
+  <ul class="list-disc list-inside text-gray-700 space-y-1">
+    <li>Mỗi ngày sử dụng ứng dụng <span class="font-semibold">≤ 45 phút</span> sẽ được cộng <span class="text-green-600 font-bold">+1 điểm</span>, nếu vượt quá thì bị trừ <span class="text-red-600 font-bold">-1 điểm</span>.</li>
+    <li>Mỗi video được đăng hợp lệ sẽ cộng <span class="text-green-600 font-bold">+1 điểm</span>.</li>
+    <li>Mỗi video bị xóa hoặc vi phạm sẽ trừ <span class="text-red-600 font-bold">-1 điểm</span>.</li>
+    <li>Điểm tổng được tính tự động hàng ngày dựa trên các yếu tố trên.</li>
+  </ul>
+</div>
 
     <!-- DANH SÁCH TRÒ CHƠI -->
     <div>

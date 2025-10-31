@@ -44,6 +44,21 @@ try {
   const getPostsCollectionRef = () => collection(db, `artifacts/${firebaseConfig.projectId}/public/data/videos`);
   setupAuthListeners(auth, DOM, (userId) => loadPosts(db, DOM, getPostsCollectionRef));
   setupVideoListeners(DOM, { db, storage, getPostsCollectionRef, getUserId });
+// =============================== NÚT THÊM VIDEO ===============================
+const openPostBtn = document.getElementById('open-post-modal-btn');
+const postModal = document.getElementById('post-modal');
+
+if (openPostBtn && postModal) {
+  openPostBtn.addEventListener('click', () => {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("Vui lòng đăng nhập trước khi đăng video.");
+      return;
+    }
+    postModal.classList.remove('hidden');
+    postModal.classList.add('flex');
+  });
+}
 
   // ========================= PROFILE =========================
   const profileBtn = document.getElementById('open-profile-btn');

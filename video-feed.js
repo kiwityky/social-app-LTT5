@@ -31,6 +31,13 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
                 DOM.postMessageEl.textContent = "Lỗi: Vui lòng chọn một file video hợp lệ.";
                 return;
             }
+            // Giới hạn dung lượng video 200MB
+const MAX_SIZE_MB = 200;
+if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+    DOM.postMessageEl.textContent = `Lỗi: Dung lượng video vượt quá ${MAX_SIZE_MB}MB.`;
+    return;
+}
+
             isFile = true;
 
             DOM.uploadBtn.disabled = true;

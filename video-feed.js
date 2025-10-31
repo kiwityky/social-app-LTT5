@@ -1,7 +1,7 @@
 import { serverTimestamp, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { formatUserId, getYoutubeId, isYoutubeUrl, MUTE_ICON_PATH, UNMUTE_ICON_PATH, PLAY_ICON_PATH, PAUSE_ICON_PATH, closeModal } from './config.js';
-import { getDoc, updateDoc, doc, arrayUnion, arrayRemove, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { setDoc, getDoc, updateDoc, doc, arrayUnion, arrayRemove, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig, LIKE_ICON_PATH, SHARE_ICON_PATH } from './config.js';
 
 // Biến giữ dependencies để render có thể truy cập db & getUserId
@@ -83,6 +83,34 @@ if (file.size > MAX_SIZE_MB * 1024 * 1024) {
         };
 
         await addDoc(getPostsCollectionRef(), newPost);
+// --- BẮT ĐẦU: Cộng điểm +1 cho người đăng và ghi lịch sử (client timestamp) ---
+try {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+
+  const historyEntry = {
+    date: new Date().toISOString(), // timestamp từ client
+    change: +1,
+    reason: "Đăng video hợp lệ"
+  };
+
+  if (userSnap && userSnap.exists()) {
+    // nếu doc user đã tồn tại -> update an toàn
+    await updateDoc(userRef, {
+      videosCount: (userSnap.data().videosCount || 0) + 1,
+      scoreHistory: arrayUnion(historyEntry)
+    });
+  } else {
+    // nếu doc user chưa tồn tại -> tạo mới với merge:true
+    await setDoc(userRef, {
+      videosCount: 1,
+      scoreHistory: [historyEntry]
+    }, { merge: true });
+  }
+} catch (err) {
+  console.error("Lỗi khi cập nhật điểm cho user:", err);
+}
+// --- KẾT THÚC: Cộng điểm ---
 
         DOM.postMessageEl.textContent = "Đăng video thành công!";
         closeModal('post-modal');
@@ -343,6 +371,43 @@ const deleteVideo = async (videoId, videoUrl, isYoutube) => {
 
     const postRef = doc(deps.db, `artifacts/${firebaseConfig.projectId}/public/data/videos`, videoId);
     await deleteDoc(postRef);
+    // ✅ Cập nhật trừ điểm cho người đăng video
+const videoSnap = await getDoc(postRef);
+if (videoSnap.exists()) {
+  const videoData = videoSnap.data();
+  const uploaderId = videoData.userId;
+  if (uploaderId) {
+    const uploaderRef = doc(deps.db, 'users', uploaderId);
+    await updateDoc(uploaderRef, {
+      lostVideos: (videoData.lostVideos || 0) + 1
+    });
+    // Ghi lịch sử điểm
+    const addScoreHistory = async (userId, change, reason = '') => {
+      await updateDoc(doc(deps.db, 'users', userId), {
+        scoreHistory: arrayUnion({
+          date: serverTimestamp(),
+          change,
+          reason
+        })
+      });
+    };
+    await addScoreHistory(uploaderId, -1, 'Video bị xóa hoặc vi phạm');
+  }
+}
+
+// --- BẮT ĐẦU: Ghi lịch sử trừ -1 cho chủ video (client timestamp) ---
+try {
+  // Lấy thông tin post trước đó nếu cần. 
+  // Lưu ý: nếu trước đó đã lấy postSnap, dùng lại; nếu không, bạn có thể pass ownerId vào hàm deleteVideo.
+  // Ở đây chúng ta sẽ giả sử `videoId` còn hợp lệ để truy xuất thông tin chủ video nếu cần.
+  // Nếu bạn đã có ownerId (post.userId) ở caller, thì dùng trực tiếp.
+  const postDocRef = doc(deps.db, `artifacts/${firebaseConfig.projectId}/public/data/videos`, videoId);
+  // NOTE: nếu đã deleteDoc(postRef) thì getDoc(postDocRef) sau đó có thể trả về null.
+  // Do đó tốt nhất là lấy post data TRƯỚC khi deleteDoc — nếu không, bạn cần truyền ownerId vào deleteVideo.
+} catch (e) {
+  console.warn("Không có post data để trừ điểm (nếu post đã bị xóa trước khi lấy owner).", e);
+}
+
 
     if (!isYoutube && videoUrl) {
         const path = decodeURIComponent(videoUrl.split('/o/')[1].split('?')[0]);

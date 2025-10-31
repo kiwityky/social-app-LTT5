@@ -1,8 +1,8 @@
 import { serverTimestamp, addDoc, onSnapshot, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { ref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { formatUserId, getYoutubeId, isYoutubeUrl, MUTE_ICON_PATH, UNMUTE_ICON_PATH, PLAY_ICON_PATH, PAUSE_ICON_PATH, closeModal } from './config.js';
-import {getDoc, updateDoc, doc, arrayUnion, arrayRemove, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { firebaseConfig,LIKE_ICON_PATH, SHARE_ICON_PATH } from './config.js';
+import { getDoc, updateDoc, doc, arrayUnion, arrayRemove, increment, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { firebaseConfig, LIKE_ICON_PATH, SHARE_ICON_PATH } from './config.js';
 
 // Biến giữ dependencies để render có thể truy cập db & getUserId
 let videoDependencies = null;
@@ -11,9 +11,6 @@ let currentActiveMediaElement = null; // Biến trạng thái để theo dõi me
 
 // --- LOGIC XỬ LÝ POST VIDEO ---
 
-/**
- * Xử lý đăng video mới (file upload hoặc YouTube URL)
- */
 const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionRef) => {
     e.preventDefault();
     if (!userId) {
@@ -35,8 +32,7 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
                 return;
             }
             isFile = true;
-            
-            // Logic Tải file lên Firebase Storage
+
             DOM.uploadBtn.disabled = true;
             DOM.uploadSpinner.classList.remove('hidden');
             DOM.uploadProgressContainer.classList.remove('hidden');
@@ -47,12 +43,12 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
             const uploadTask = uploadBytesResumable(storageRef, file);
 
             finalVideoUrl = await new Promise((resolve, reject) => {
-                uploadTask.on('state_changed', 
+                uploadTask.on('state_changed',
                     (snapshot) => {
                         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                         DOM.uploadProgressEl.style.width = progress + '%';
                         DOM.postMessageEl.textContent = `Đang tải lên: ${Math.round(progress)}%`;
-                    }, 
+                    },
                     (error) => reject(new Error(`Tải lên thất bại: ${error.message}`)),
                     async () => resolve(await getDownloadURL(uploadTask.snapshot.ref))
                 );
@@ -65,10 +61,8 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
                 return;
             }
             finalVideoUrl = url;
-            isFile = false;
         }
-        
-        // GHI THÔNG TIN VÀO FIRESTORE
+
         const newPost = {
             userId: userId,
             title: title,
@@ -77,19 +71,17 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
             timestamp: serverTimestamp(),
             username: `User_${formatUserId(userId)}`,
             isYoutube: !isFile,
-            // MỚI: khởi tạo cho Like & Share
             likes: [],
             shareCount: 0
         };
 
-        // Lỗi đã được sửa: Đã import addDoc
-        await addDoc(getPostsCollectionRef(), newPost); 
+        await addDoc(getPostsCollectionRef(), newPost);
 
         DOM.postMessageEl.textContent = "Đăng video thành công!";
         closeModal('post-modal');
         DOM.postForm.reset();
-        DOM.postFileEl.value = ''; 
-        DOM.postUrlEl.value = ''; 
+        DOM.postFileEl.value = '';
+        DOM.postUrlEl.value = '';
         setTimeout(() => DOM.postMessageEl.textContent = '', 3000);
 
     } catch (error) {
@@ -104,9 +96,6 @@ const handlePostSubmit = async (e, userId, db, storage, DOM, getPostsCollectionR
 
 // --- LOGIC PLAY/PAUSE/MUTE ---
 
-/**
- * Xử lý bật/tắt âm thanh (Đã export ra global scope trong config.js)
- */
 const toggleMute = (element) => {
     let isMuted = false;
     const iconImage = element.closest('.video-snap-item').querySelector('.volume-icon');
@@ -120,15 +109,15 @@ const toggleMute = (element) => {
             element.src = currentSrc.replace('mute=1', 'mute=0');
             isMuted = false;
         } else if (currentSrc.includes('mute=0')) {
-             element.src = currentSrc.replace('mute=0', 'mute=1');
-             isMuted = true;
+            element.src = currentSrc.replace('mute=0', 'mute=1');
+            isMuted = true;
         } else {
-             const separator = currentSrc.includes('?') ? '&' : '?';
-             element.src = currentSrc + `${separator}mute=0`;
-             isMuted = false;
+            const separator = currentSrc.includes('?') ? '&' : '?';
+            element.src = currentSrc + `${separator}mute=0`;
+            isMuted = false;
         }
     }
-    
+
     if (iconImage) {
         iconImage.src = isMuted ? MUTE_ICON_PATH : UNMUTE_ICON_PATH;
         iconImage.classList.remove('text-white');
@@ -137,33 +126,26 @@ const toggleMute = (element) => {
 };
 window.toggleMute = toggleMute;
 
-
-/**
- * Xử lý sự kiện nhấp vào video để Play/Pause
- */
 const togglePlayPause = (mediaContainer) => {
     const mediaElement = mediaContainer.querySelector('.media-element');
     const playPauseIcon = mediaContainer.querySelector('.play-pause-icon');
-    
-    if (!mediaElement || mediaElement.tagName !== 'VIDEO') {
-        return; 
-    }
+
+    if (!mediaElement || mediaElement.tagName !== 'VIDEO') return;
 
     if (mediaElement.paused) {
         mediaElement.play().catch(e => console.log("Play failed:", e));
         playPauseIcon.classList.add('hidden');
     } else {
         mediaElement.pause();
-        playPauseIcon.src = PLAY_ICON_PATH; 
-        playPauseIcon.classList.remove('hidden'); 
+        playPauseIcon.src = PLAY_ICON_PATH;
+        playPauseIcon.classList.remove('hidden');
     }
-    
+
     currentActiveMediaElement = mediaElement;
 };
 window.togglePlayPause = togglePlayPause;
 
-
-// --- LOGIC HIỂN THỊ VÀ CUỘN VIDEO ---
+// --- HIỂN THỊ VIDEO ---
 
 const renderVideoFeed = (posts, DOM) => {
     DOM.videoFeedContainer.innerHTML = '';
@@ -179,7 +161,7 @@ const renderVideoFeed = (posts, DOM) => {
         postElement.className = 'video-snap-item relative';
         postElement.setAttribute('data-id', post.id);
 
-        // === Media hiển thị ===
+        // Media hiển thị
         let mediaHtml = '';
         let playPauseOverlayHtml = '';
 
@@ -187,45 +169,25 @@ const renderVideoFeed = (posts, DOM) => {
             const videoId = getYoutubeId(post.videoUrl);
             if (!videoId) return;
             const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=0&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&loop=1&playlist=${videoId}`;
-            mediaHtml = `
-                <iframe class="video-display media-element"
-                        src="${embedUrl}"
-                        frameborder="0"
-                        allow="autoplay; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen>
-                </iframe>
-            `;
+            mediaHtml = `<iframe class="video-display media-element" src="${embedUrl}" frameborder="0" allow="autoplay; encrypted-media;" allowfullscreen></iframe>`;
         } else {
-            mediaHtml = `
-                <video class="video-display media-element"
-                       src="${post.videoUrl}"
-                       loop
-                       muted
-                       playsinline
-                       style="object-fit: contain; pointer-events: none;">
-                    Trình duyệt của bạn không hỗ trợ thẻ video.
-                </video>
-            `;
+            mediaHtml = `<video class="video-display media-element" src="${post.videoUrl}" loop muted playsinline style="object-fit: contain; pointer-events: none;"></video>`;
             playPauseOverlayHtml = `
-                <div onclick="togglePlayPause(this.closest('.video-snap-item'))"
-                     class="absolute inset-0 z-5 cursor-pointer"></div>
+                <div onclick="togglePlayPause(this.closest('.video-snap-item'))" class="absolute inset-0 z-5 cursor-pointer"></div>
                 <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-black bg-opacity-0 p-4 rounded-full pointer-events-none">
                     <img class="play-pause-icon h-10 w-10 text-white hidden" src="${PAUSE_ICON_PATH}" alt="Play/Pause">
                 </div>
             `;
         }
 
-        // === Chuẩn bị dữ liệu like/share ===
         const currentUserId = videoDependencies?.getUserId?.();
         const likedByMe = Array.isArray(post.likes) && currentUserId && post.likes.includes(currentUserId);
         const likeCountText = post.likes?.length ? String(post.likes.length) : '';
         const shareCountText = post.shareCount ? String(post.shareCount) : '';
 
-        // === Nội dung hiển thị bài ===
         postElement.innerHTML = `
             ${mediaHtml}
             ${playPauseOverlayHtml}
-
             <div class="absolute bottom-16 left-0 right-0 p-4 text-white z-10">
                 <div class="bg-black bg-opacity-0 p-3 rounded-lg">
                     <h4 class="font-bold text-lg">${post.title}</h4>
@@ -233,42 +195,53 @@ const renderVideoFeed = (posts, DOM) => {
                     <p class="text-xs text-gray-300 mt-2">@${post.username || formatUserId(post.userId)} - Nguồn: ${post.isYoutube ? 'YouTube' : 'Upload'}</p>
                 </div>
             </div>
-
-            <!-- CỤM ĐIỀU KHIỂN CHUNG -->
             <div class="video-controls">
-                <button onclick="toggleMute(this.closest('.video-snap-item').querySelector('.media-element'))"
-                        class="ctrl-btn volume-btn">
-                    <img class="volume-icon h-6 w-6 text-black" src="${MUTE_ICON_PATH}" alt="Volume">
+                <button onclick="toggleMute(this.closest('.video-snap-item').querySelector('.media-element'))" class="ctrl-btn volume-btn">
+                    <img class="volume-icon h-6 w-6 text-black" src="${MUTE_ICON_PATH}">
                 </button>
-
-                <button class="like-btn ctrl-btn ${likedByMe ? 'liked' : ''}" title="Thích">
-    <img class="like-icon h-6 w-6" src="${LIKE_ICON_PATH}" alt="Like">
-</button>
-<p class="like-count">${likeCountText}</p>
-
-<button class="share-btn ctrl-btn" title="Chia sẻ">
-    <img class="share-icon h-6 w-6" src="${SHARE_ICON_PATH}" alt="Share">
-</button>
-<p class="share-count">${shareCountText}</p>
-
+                <button class="like-btn ctrl-btn ${likedByMe ? 'liked' : ''}">
+                    <img class="like-icon h-6 w-6" src="${LIKE_ICON_PATH}">
+                </button>
+                <p class="like-count">${likeCountText}</p>
+                <button class="share-btn ctrl-btn">
+                    <img class="share-icon h-6 w-6" src="${SHARE_ICON_PATH}">
+                </button>
+                <p class="share-count">${shareCountText}</p>
             </div>
         `;
 
-        // === Gắn vào container ===
         DOM.videoFeedContainer.appendChild(postElement);
 
-        // === Gắn sự kiện ===
+        // Sự kiện Like & Share
         const likeBtnEl = postElement.querySelector('.like-btn');
         const shareBtnEl = postElement.querySelector('.share-btn');
         if (likeBtnEl) likeBtnEl.addEventListener('click', e => { e.stopPropagation(); handleLike(post.id); });
         if (shareBtnEl) shareBtnEl.addEventListener('click', e => { e.stopPropagation(); handleShare(post.id, post.videoUrl); });
+
+        // ✅ Thêm nút xóa (chỉ admin)
+        const currentUserId2 = videoDependencies?.getUserId?.();
+        if (currentUserId2) {
+            const userRef = doc(videoDependencies.db, 'users', currentUserId2);
+            getDoc(userRef).then(snap => {
+                const role = snap.exists() ? snap.data().role : '';
+                if (role === 'admin') {
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'ctrl-btn bg-red-500 hover:bg-red-600 text-white';
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.title = 'Xóa video';
+                    deleteBtn.addEventListener('click', e => {
+                        e.stopPropagation();
+                        deleteVideo(post.id, post.videoUrl, post.isYoutube);
+                    });
+                    postElement.querySelector('.video-controls').appendChild(deleteBtn);
+                }
+            });
+        }
     });
 
     DOM.videoFeedContainer.prepend(DOM.loadingFeedEl);
     handleVideoScrolling(DOM);
 };
-
-
 
 const handleVideoScrolling = (DOM) => {
     const observer = new IntersectionObserver((entries) => {
@@ -281,255 +254,127 @@ const handleVideoScrolling = (DOM) => {
             if (entry.isIntersecting) {
                 if (mediaElement !== currentActiveMediaElement) {
                     if (currentActiveMediaElement) {
-                        // Tạm dừng/reset media cũ
                         if (currentActiveMediaElement.tagName === 'VIDEO') {
                             currentActiveMediaElement.pause();
-                            const oldPlayPauseIcon = currentActiveMediaElement.closest('.video-snap-item')?.querySelector('.play-pause-icon');
-                            if (oldPlayPauseIcon) {
-                                oldPlayPauseIcon.src = PLAY_ICON_PATH;
-                                oldPlayPauseIcon.classList.remove('hidden');
-                            }
-                        } else if (currentActiveMediaElement.tagName === 'IFRAME') {
-                             const oldId = getYoutubeId(currentActiveMediaElement.src);
-                             if(oldId) currentActiveMediaElement.src = `https://www.youtube.com/embed/${oldId}?autoplay=0&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&loop=1&playlist=${oldId}`;
+                            const oldIcon = currentActiveMediaElement.closest('.video-snap-item')?.querySelector('.play-pause-icon');
+                            if (oldIcon) oldIcon.src = PLAY_ICON_PATH;
                         }
-                        
-                        // Phát media mới (luôn ở trạng thái MUTE)
-                        if (mediaElement.tagName === 'VIDEO') {
-                            mediaElement.muted = true; 
-                            mediaElement.play().catch(e => {
-                                console.log("Video play failed:", e);
-                                if(playPauseIcon) playPauseIcon.classList.remove('hidden'); 
-                            });
-                            if (playPauseIcon) playPauseIcon.classList.add('hidden');
-
-                        } else if (mediaElement.tagName === 'IFRAME') {
-                            const videoId = getYoutubeId(mediaElement.src);
-                            if(videoId) mediaElement.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&loop=1&playlist=${videoId}`;
-                        }
-                        
-                        currentActiveMediaElement = mediaElement;
-                        if(iconImage) iconImage.src = MUTE_ICON_PATH;
                     }
+
+                    if (mediaElement.tagName === 'VIDEO') {
+                        mediaElement.muted = true;
+                        mediaElement.play().catch(() => {});
+                        if (playPauseIcon) playPauseIcon.classList.add('hidden');
+                    }
+                    currentActiveMediaElement = mediaElement;
+                    if (iconImage) iconImage.src = MUTE_ICON_PATH;
                 }
             } else {
-                if (mediaElement.tagName === 'VIDEO') {
-                    mediaElement.pause();
-                }
+                if (mediaElement.tagName === 'VIDEO') mediaElement.pause();
             }
         });
-    }, {
-        root: DOM.videoFeedContainer,
-        threshold: 0.8 
-    });
-    
-    const videoItems = DOM.videoFeedContainer.querySelectorAll('.video-snap-item');
-    videoItems.forEach(item => observer.observe(item));
+    }, { root: DOM.videoFeedContainer, threshold: 0.8 });
 
-    // Xử lý phát video đầu tiên ngay lập tức
-    if(videoItems.length > 0) {
-         const firstMedia = videoItems[0].querySelector('.media-element');
-         const firstIcon = videoItems[0].querySelector('.volume-icon');
-         const firstPlayPauseIcon = videoItems[0].querySelector('.play-pause-icon');
-
-         if(firstMedia) {
-             if(firstMedia.tagName === 'VIDEO') {
-                firstMedia.play().catch(e => console.log("First video play failed:", e));
-             } else if (firstMedia.tagName === 'IFRAME') {
-                 const videoId = getYoutubeId(firstMedia.src);
-                 if(videoId) firstMedia.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&loop=1&playlist=${videoId}`;
-             }
-             currentActiveMediaElement = firstMedia;
-             if(firstIcon) firstIcon.src = MUTE_ICON_PATH;
-             if(firstPlayPauseIcon) firstPlayPauseIcon.classList.add('hidden');
-         }
-    }
+    DOM.videoFeedContainer.querySelectorAll('.video-snap-item').forEach(item => observer.observe(item));
 };
-/**
- * Xử lý Like: cập nhật Firestore (thêm/xóa UID trong mảng likes).
- * Cập nhật UI tối ưu hoá ngay lập tức (optimistic).
- */
+
 const handleLike = async (postId) => {
     const deps = videoDependencies;
     const userId = deps?.getUserId?.();
-    if (!userId) {
-        return alert("Vui lòng đăng nhập để thích video.");
-    }
-    if (!deps || !deps.db) {
-        console.error("DB không khả dụng.");
-        return;
-    }
+    if (!userId) return alert("Vui lòng đăng nhập.");
 
-    // Tham chiếu tới document bài đăng
     const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
-
-    // UI element tham chiếu
     const postEl = document.querySelector(`[data-id='${postId}']`);
-    if (!postEl) {
-        // fallback: chỉ update Firestore
-        try {
-            await updateDoc(postRef, { likes: arrayUnion(userId) });
-        } catch (e) { console.error(e); }
-        return;
-    }
-
-    const likeBtn = postEl.querySelector('.like-btn');
-    const likeCountEl = postEl.querySelector('.like-count');
-    const currentlyLiked = likeBtn.classList.contains('liked'); // class 'liked' ta dùng để biết trạng thái
+    const likeBtn = postEl?.querySelector('.like-btn');
+    const likeCountEl = postEl?.querySelector('.like-count');
+    const liked = likeBtn?.classList.contains('liked');
 
     try {
-        if (currentlyLiked) {
-            // undo like
+        if (liked) {
             await updateDoc(postRef, { likes: arrayRemove(userId) });
             likeBtn.classList.remove('liked');
-            // cập nhật số (nếu có)
             const cur = parseInt(likeCountEl.textContent || '0');
-            likeCountEl.textContent = cur > 1 ? (cur - 1) : '';
+            likeCountEl.textContent = cur > 1 ? cur - 1 : '';
         } else {
-            // add like
             await updateDoc(postRef, { likes: arrayUnion(userId) });
             likeBtn.classList.add('liked');
             const cur = parseInt(likeCountEl.textContent || '0');
-            likeCountEl.textContent = (isNaN(cur) ? 1 : cur + 1);
+            likeCountEl.textContent = isNaN(cur) ? '1' : (cur + 1);
         }
-    } catch (error) {
-        console.error("Lỗi khi cập nhật like:", error);
-        alert("Không thể cập nhật like. Vui lòng thử lại.");
+    } catch (err) {
+        console.error(err);
     }
 };
 
-/**
- * Xử lý Share: mỗi người chỉ được chia sẻ 1 lần / video.
- */
 const handleShare = async (postId, videoUrl) => {
     const deps = videoDependencies;
     const userId = deps?.getUserId?.();
-    if (!userId) {
-        return alert("Vui lòng đăng nhập để chia sẻ video.");
-    }
-    if (!deps || !deps.db) {
-        console.error("DB không khả dụng.");
-        return;
-    }
+    if (!userId) return alert("Vui lòng đăng nhập.");
 
     const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
-    const postEl = document.querySelector(`[data-id='${postId}']`);
-    const shareCountEl = postEl?.querySelector('.share-count');
+    const snapshot = await getDoc(postRef);
+    const data = snapshot.exists() ? snapshot.data() : {};
+    const sharedBy = Array.isArray(data.sharedBy) ? data.sharedBy : [];
 
-    try {
-        // Lấy dữ liệu hiện tại (an toàn)
-        const snapshot = await getDoc(postRef);
-        const postData = snapshot.exists() ? snapshot.data() : {};
-        const sharedBy = Array.isArray(postData.sharedBy) ? postData.sharedBy : [];
+    if (sharedBy.includes(userId)) return alert("Bạn đã chia sẻ video này rồi.");
 
-        // Nếu user đã chia sẻ
-        if (sharedBy.includes(userId)) {
-            alert("Bạn đã chia sẻ video này rồi.");
-            return;
-        }
-
-        // Nếu chưa có trường sharedBy, khởi tạo mảng mới
-        const newSharedBy = [...sharedBy, userId];
-
-        // Cập nhật Firestore: lưu cả mảng sharedBy mới + tăng shareCount
-        await updateDoc(postRef, {
-            sharedBy: newSharedBy,
-            shareCount: increment(1)
-        });
-
-        // Cập nhật UI
-        const cur = parseInt(shareCountEl?.textContent || '0');
-        if (shareCountEl) shareCountEl.textContent = isNaN(cur) ? '1' : (cur + 1).toString();
-
-        // Copy link video
-        const textToCopy = videoUrl || window.location.href;
-        if (navigator?.clipboard?.writeText) {
-            await navigator.clipboard.writeText(textToCopy);
-            alert("Đã sao chép liên kết video vào clipboard.");
-        } else {
-            prompt("Sao chép liên kết video:", textToCopy);
-        }
-
-    } catch (error) {
-        console.error("Lỗi khi chia sẻ:", error);
-        alert("Không thể chia sẻ. Vui lòng thử lại.");
-    }
+    await updateDoc(postRef, { sharedBy: [...sharedBy, userId], shareCount: increment(1) });
+    await navigator.clipboard.writeText(videoUrl);
+    alert("Đã sao chép liên kết video!");
 };
 
+const deleteVideo = async (videoId, videoUrl, isYoutube) => {
+    const deps = videoDependencies;
+    const userId = deps?.getUserId?.();
+    if (!userId) return alert("Vui lòng đăng nhập.");
 
+    const userRef = doc(deps.db, 'users', userId);
+    const snap = await getDoc(userRef);
+    const role = snap.exists() ? snap.data().role : '';
+    if (role !== 'admin') return alert("Chỉ admin mới được quyền xóa video!");
+    if (!confirm("Bạn có chắc chắn muốn xóa video này không?")) return;
 
+    const postRef = doc(deps.db, `artifacts/${firebaseConfig.projectId}/public/data/videos`, videoId);
+    await deleteDoc(postRef);
 
-/**
- * Tải danh sách bài đăng từ Firestore và hiển thị.
- * @param {object} db - Firestore instance
- * @param {object} DOM - Các phần tử DOM
- * @param {function} getPostsCollectionRef - Hàm lấy tham chiếu collection
- */
+    if (!isYoutube && videoUrl) {
+        const path = decodeURIComponent(videoUrl.split('/o/')[1].split('?')[0]);
+        const fileRef = ref(deps.storage, path);
+        await deleteObject(fileRef);
+    }
+    alert("Đã xóa video thành công!");
+};
+window.deleteVideo = deleteVideo;
+
 export const loadPosts = (db, DOM, getPostsCollectionRef) => {
     const postsQuery = query(getPostsCollectionRef());
     DOM.loadingFeedEl.classList.remove('hidden');
     DOM.loadingFeedEl.textContent = 'Đang tải video...';
 
     onSnapshot(postsQuery, (snapshot) => {
-        let currentPosts = [];
-        snapshot.forEach(doc => {
-            currentPosts.push({ id: doc.id, ...doc.data() });
-        });
-        currentPosts.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-
-        // KIỂM TRA QUAN TRỌNG: Kiểm tra xem đã có video nào trong Firestore chưa
-        if (currentPosts.length > 0) {
-            console.log(`Đã tìm thấy ${currentPosts.length} video.`);
-        } else {
-             console.log("Không tìm thấy video nào trong Firestore. Hãy đăng thử một video YouTube.");
-        }
-        
-        renderVideoFeed(currentPosts, DOM);
+        const posts = [];
+        snapshot.forEach(doc => posts.push({ id: doc.id, ...doc.data() }));
+        posts.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+        renderVideoFeed(posts, DOM);
         DOM.loadingFeedEl.classList.add('hidden');
-    }, (error) => {
-        DOM.loadingFeedEl.textContent = "Lỗi khi tải nội dung.";
-        console.error("Lỗi Firestore:", error);
     });
 };
 
-/**
- * Thiết lập các listener liên quan đến video và form đăng bài.
- * @param {object} DOM - Các phần tử DOM
- * @param {object} dependencies - Các dependencies cần thiết (db, storage, collectionRef)
- */
 export const setupVideoListeners = (DOM, dependencies) => {
-    // Lưu dependencies để renderVideoFeed và handler khác sử dụng
     videoDependencies = dependencies;
-    // Xử lý chuyển đổi input File/URL
+
     DOM.sourceUploadRadio.addEventListener('change', () => {
         DOM.postFileEl.classList.remove('hidden');
         DOM.postUrlEl.classList.add('hidden');
-        DOM.postFileEl.setAttribute('required', 'required');
-        DOM.postUrlEl.removeAttribute('required');
     });
 
     DOM.sourceYoutubeRadio.addEventListener('change', () => {
         DOM.postFileEl.classList.add('hidden');
         DOM.postUrlEl.classList.remove('hidden');
-        DOM.postUrlEl.setAttribute('required', 'required');
-        DOM.postFileEl.removeAttribute('required');
     });
-    
-    // Gắn sự kiện cho form đăng bài
+
     DOM.postForm.addEventListener('submit', (e) => {
         const userId = dependencies.getUserId();
         handlePostSubmit(e, userId, dependencies.db, dependencies.storage, DOM, dependencies.getPostsCollectionRef);
-    });
-    
-    // Logic mở modal Đăng bài
-    DOM.openPostModalBtn.addEventListener('click', () => {
-         const userId = dependencies.getUserId();
-         if (userId) {
-            document.getElementById('post-modal').classList.add('flex');
-            document.getElementById('post-modal').classList.remove('hidden');
-            DOM.postMessageEl.textContent = ''; 
-        } else {
-            DOM.authMessageEl.textContent = "Vui lòng đăng nhập để đăng video.";
-        }
     });
 };

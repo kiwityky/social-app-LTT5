@@ -354,3 +354,41 @@ function updateLastBotMessage(newText) {
   const last = aiMessages.querySelector('.bg-gray-200:last-child');
   if (last) last.textContent = newText;
 }
+// =============================== TÌM KIẾM VIDEO ===============================
+const searchBtn = document.getElementById('search-btn');
+const searchBox = document.getElementById('search-box');
+const searchInput = document.getElementById('search-input');
+const searchSubmit = document.getElementById('search-submit');
+
+// Khi bấm vào nút tìm kiếm — ẩn/hiện khung
+if (searchBtn && searchBox) {
+  searchBtn.addEventListener('click', () => {
+    searchBox.classList.toggle('hidden');
+    if (!searchBox.classList.contains('hidden')) {
+      searchInput.focus();
+    }
+  });
+}
+
+// Khi bấm nút TÌM
+if (searchSubmit) {
+  searchSubmit.addEventListener('click', () => {
+    const keyword = searchInput.value.trim().toLowerCase();
+    if (!keyword) return;
+
+    const videos = document.querySelectorAll('.video-snap-item');
+    let found = false;
+    videos.forEach(video => {
+      const title = video.querySelector('h4')?.textContent.toLowerCase() || '';
+      const desc = video.querySelector('p')?.textContent.toLowerCase() || '';
+      if (title.includes(keyword) || desc.includes(keyword)) {
+        video.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        video.classList.add('ring', 'ring-4', 'ring-blue-400');
+        setTimeout(() => video.classList.remove('ring', 'ring-4', 'ring-blue-400'), 2000);
+        found = true;
+      }
+    });
+
+    if (!found) alert('Không tìm thấy video nào phù hợp.');
+  });
+}

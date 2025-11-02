@@ -68,6 +68,19 @@ export const getDOMElements = () => ({
     recommendModal: document.getElementById('recommend-modal'),
     modalContent: document.getElementById('modal-content'),
     openRecommendModalBtn: document.getElementById('open-recommend-modal-btn'),
+
+    // Habit tracker
+    habitSection: document.getElementById('habit-section'),
+    habitStatusEl: document.getElementById('habit-status'),
+    habitSummaryEl: document.getElementById('habit-summary'),
+    habitDefinitionsEl: document.getElementById('habit-definitions'),
+    habitDefinitionEmptyEl: document.getElementById('habit-definition-empty'),
+    habitChartCanvas: document.getElementById('habit-chart'),
+    habitLogListEl: document.getElementById('habit-log-list'),
+    habitEmptyEl: document.getElementById('habit-empty'),
+    habitRefreshBtn: document.getElementById('habit-refresh-btn'),
+    habitAiBtn: document.getElementById('habit-ai-btn'),
+    habitAiMessageEl: document.getElementById('habit-ai-message'),
 });
 
 // Hàm tiện ích

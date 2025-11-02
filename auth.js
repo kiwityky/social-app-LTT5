@@ -78,9 +78,10 @@ const handleLogout = async (auth, DOM) => {
  * Thiết lập các listener cho Auth và trả về ID người dùng hiện tại
  * @param {object} auth - Firebase Auth instance
  * @param {object} DOM - Các phần tử DOM
- * @param {function} loadPostsCallback - Callback để tải video khi người dùng đăng nhập
+ * @param {function} onLoginCallback - Callback để thực hiện khi người dùng đăng nhập
+ * @param {function} [onLogoutCallback] - Callback khi người dùng đăng xuất
  */
-export const setupAuthListeners = (auth, DOM, loadPostsCallback) => {
+export const setupAuthListeners = (auth, DOM, onLoginCallback, onLogoutCallback) => {
     
     // Gắn sự kiện cho form Đăng nhập
     DOM.loginForm.addEventListener('submit', (e) => {
@@ -115,14 +116,17 @@ export const setupAuthListeners = (auth, DOM, loadPostsCallback) => {
             DOM.videoFeedContainer.style.display = 'block';
             
             // Tải video khi người dùng đã đăng nhập
-            if (loadPostsCallback) {
-                loadPostsCallback(userId);
+            if (onLoginCallback) {
+                onLoginCallback(userId);
             }
         } else {
             userId = null;
             DOM.authStatusEl.textContent = "Chưa đăng nhập.";
             DOM.authContainer.classList.remove('hidden');
             DOM.videoFeedContainer.style.display = 'none';
+            if (onLogoutCallback) {
+                onLogoutCallback();
+            }
         }
     });
 };

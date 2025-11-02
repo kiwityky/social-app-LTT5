@@ -28,10 +28,59 @@
             </div>
         </header>
 
-        <main class="mt-16"> 
+        <main class="mt-16">
              <div id="video-feed-container">
                 <p id="loading-feed" class="text-center text-gray-500 p-8">Đang tải video...</p>
             </div>
+
+            <section id="habit-section" class="max-w-4xl mx-auto px-4 mt-8 hidden">
+                <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6 space-y-6">
+                    <header class="flex flex-col gap-2">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">🧠</span>
+                            <div>
+                                <h2 class="text-2xl font-extrabold text-slate-800">Habit Tracker</h2>
+                                <p class="text-sm text-slate-500">Theo dõi bảng công tắc ESP32-C3 và cổ vũ thói quen học tập mỗi ngày.</p>
+                            </div>
+                        </div>
+                        <p id="habit-status" class="text-xs font-medium text-slate-500"></p>
+                    </header>
+
+                    <div id="habit-summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                            <span>📋</span>Thói quen đang theo dõi
+                        </h3>
+                        <div id="habit-definitions" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                        <p id="habit-definition-empty" class="text-sm text-slate-500 hidden">Chưa có thói quen nào được cấu hình. Hãy thêm dữ liệu trong Firestore để bắt đầu.</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-gradient-to-br from-slate-50 to-slate-100 border border-slate-200 rounded-2xl p-4">
+                            <h3 class="text-lg font-semibold text-slate-700 mb-2">Biểu đồ 7 ngày gần nhất</h3>
+                            <canvas id="habit-chart" height="220"></canvas>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-lg font-semibold text-slate-700">Nhật ký mới nhất</h3>
+                                <button id="habit-refresh-btn" class="text-sm font-semibold text-slate-600 hover:text-slate-800 flex items-center gap-1">
+                                    <span class="text-lg">↻</span>Đồng bộ
+                                </button>
+                            </div>
+                            <p id="habit-empty" class="text-sm text-slate-500 hidden">Chưa có dữ liệu từ bảng công tắc.</p>
+                            <ul id="habit-log-list" class="space-y-3 overflow-y-auto max-h-72 pr-2"></ul>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button id="habit-ai-btn" class="w-full md:w-auto bg-slate-800 hover:bg-slate-900 text-white font-semibold px-4 py-2 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                            <span>🌻</span><span>Xin gợi ý động lực từ trợ lý AI</span>
+                        </button>
+                        <div id="habit-ai-message" class="text-sm text-slate-700 bg-slate-100 border border-slate-200 rounded-xl p-3 hidden"></div>
+                    </div>
+                </div>
+            </section>
         </main>
         
         <div id="auth-container" class="video-card p-6 mb-8 fixed inset-0 z-30 bg-white hidden">
@@ -349,7 +398,8 @@
   </div>
 </div>
 
-    <script type="module" src="main.js"></script> 
-    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" integrity="sha384-+pi8A5tE0PCqlYiDKfNddZjOeIV7CcuJSrl9F0zkfM1pCaWZYvm0Bw1QD6ImEEp8" crossorigin="anonymous"></script>
+    <script type="module" src="main.js"></script>
+
 </body>
 </html>

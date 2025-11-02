@@ -7,14 +7,16 @@ import {
   reauthenticateWithCredential, 
   EmailAuthProvider 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-  getFirestore, 
-  collection, 
-  doc, 
-  getDoc, 
+import {
+  getFirestore,
+  collection,
+  doc,
+  getDoc,
   getDocs,
-  setDoc, 
-  updateDoc, 
+  query,
+  where,
+  setDoc,
+  updateDoc,
   arrayUnion,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -33,6 +35,423 @@ const DOM = getDOMElements();
 
 let app, db, auth, storage;
 
+let currentUserId = null;
+let habitChart = null;
+let habitState = { habits: [], logs: [], stats: null };
+
+const HABIT_CHART_DAYS = 7;
+
+const getHabitsCollectionRef = () => collection(db, `artifacts/${firebaseConfig.projectId}/public/data/habits`);
+const getHabitLogsCollectionRef = () => collection(db, `artifacts/${firebaseConfig.projectId}/public/data/habitLogs`);
+
+const resetHabitSection = () => {
+  habitState = { habits: [], logs: [], stats: null };
+  if (habitChart) {
+    habitChart.destroy();
+    habitChart = null;
+  }
+  if (DOM.habitSummaryEl) DOM.habitSummaryEl.innerHTML = '';
+  if (DOM.habitDefinitionsEl) DOM.habitDefinitionsEl.innerHTML = '';
+  if (DOM.habitLogListEl) DOM.habitLogListEl.innerHTML = '';
+  DOM.habitEmptyEl?.classList.add('hidden');
+  DOM.habitDefinitionEmptyEl?.classList.add('hidden');
+  if (DOM.habitAiMessageEl) {
+    DOM.habitAiMessageEl.classList.add('hidden');
+    DOM.habitAiMessageEl.textContent = '';
+  }
+};
+
+const updateHabitStatus = (text, isError = false) => {
+  if (!DOM.habitStatusEl) return;
+  DOM.habitStatusEl.textContent = text;
+  DOM.habitStatusEl.classList.toggle('text-rose-600', isError);
+  DOM.habitStatusEl.classList.toggle('text-slate-500', !isError);
+};
+
+const toggleHabitSection = (shouldShow, statusMessage = '') => {
+  if (!DOM.habitSection) return;
+  if (shouldShow) {
+    DOM.habitSection.classList.remove('hidden');
+  } else {
+    DOM.habitSection.classList.add('hidden');
+    resetHabitSection();
+  }
+  if (statusMessage || !shouldShow) {
+    updateHabitStatus(statusMessage, false);
+  }
+};
+
+const setHabitRefreshLoading = (isLoading) => {
+  if (!DOM.habitRefreshBtn) return;
+  DOM.habitRefreshBtn.disabled = isLoading;
+  DOM.habitRefreshBtn.classList.toggle('opacity-60', isLoading);
+  DOM.habitRefreshBtn.classList.toggle('cursor-not-allowed', isLoading);
+};
+
+const formatDateKey = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const formatShortDate = (date) => new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit',
+  month: '2-digit'
+}).format(date);
+
+const formatFullDate = (date) => new Intl.DateTimeFormat('vi-VN', {
+  hour: '2-digit',
+  minute: '2-digit',
+  day: '2-digit',
+  month: '2-digit'
+}).format(date);
+
+const getDateFromLog = (log) => {
+  const ts = log?.timestamp || log?.time;
+  if (!ts) return null;
+  if (typeof ts.toDate === 'function') return ts.toDate();
+  if (typeof ts === 'number') return new Date(ts);
+  if (typeof ts === 'string') {
+    const parsed = Date.parse(ts);
+    if (!Number.isNaN(parsed)) return new Date(parsed);
+  }
+  return null;
+};
+
+const calculateHabitStreak = (byDateMap) => {
+  let streak = 0;
+  const cursor = new Date();
+  while (streak <= 365) {
+    const key = formatDateKey(cursor);
+    if (byDateMap.has(key)) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+};
+
+const computeHabitStats = (habits, logs) => {
+  const byDate = new Map();
+  const perHabit = new Map();
+  const todayKey = formatDateKey(new Date());
+  let latestTimestamp = null;
+
+  logs.forEach((log) => {
+    const date = getDateFromLog(log);
+    if (!date) return;
+    const key = formatDateKey(date);
+    byDate.set(key, (byDate.get(key) || 0) + 1);
+
+    const habitId = log.habitId || log.habit || log.id || 'unknown';
+    const counts = perHabit.get(habitId) || { today: 0, total: 0 };
+    counts.total += 1;
+    if (key === todayKey) counts.today += 1;
+    perHabit.set(habitId, counts);
+
+    if (!latestTimestamp || date > latestTimestamp) {
+      latestTimestamp = date;
+    }
+  });
+
+  let topHabitId = null;
+  let topHabitTotal = 0;
+  perHabit.forEach((counts, habitId) => {
+    if (counts.total > topHabitTotal) {
+      topHabitTotal = counts.total;
+      topHabitId = habitId;
+    }
+  });
+
+  return {
+    todayCount: byDate.get(todayKey) || 0,
+    totalCount: logs.length,
+    habitsTracked: habits.length || perHabit.size,
+    streak: calculateHabitStreak(byDate),
+    byDate,
+    perHabit,
+    latestTimestamp,
+    topHabitId,
+    topHabitTotal
+  };
+};
+
+const buildChartDataset = (byDate) => {
+  const labels = [];
+  const values = [];
+  const base = new Date();
+  for (let offset = HABIT_CHART_DAYS - 1; offset >= 0; offset -= 1) {
+    const day = new Date();
+    day.setDate(base.getDate() - offset);
+    labels.push(formatShortDate(day));
+    const key = formatDateKey(day);
+    values.push(byDate.get(key) || 0);
+  }
+  return { labels, values };
+};
+
+const renderHabitSummary = (stats) => {
+  if (!DOM.habitSummaryEl) return;
+  const summaryItems = [
+    {
+      title: 'Hoàn thành hôm nay',
+      value: stats.todayCount,
+      caption: 'Số lần bật công tắc trong ngày',
+      style: 'bg-gradient-to-br from-sky-500 to-sky-600 text-white'
+    },
+    {
+      title: 'Chuỗi ngày duy trì',
+      value: stats.streak,
+      caption: 'Số ngày liên tục có ít nhất một lượt',
+      style: 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white'
+    },
+    {
+      title: 'Nhật ký đã lưu',
+      value: stats.totalCount,
+      caption: 'Tổng lượt hoàn thành được ghi nhận',
+      style: 'bg-slate-900 text-white'
+    },
+    {
+      title: 'Thói quen theo dõi',
+      value: stats.habitsTracked,
+      caption: 'Được cấu hình trong Firestore',
+      style: 'bg-slate-100 text-slate-800 border border-slate-200'
+    }
+  ];
+
+  DOM.habitSummaryEl.innerHTML = summaryItems.map((item) => `
+    <div class="rounded-2xl ${item.style} p-4 shadow-md">
+      <p class="text-xs uppercase tracking-wide opacity-80">${item.title}</p>
+      <p class="text-3xl font-extrabold mt-2">${item.value}</p>
+      <p class="text-xs mt-2 opacity-90">${item.caption}</p>
+    </div>
+  `).join('');
+};
+
+const renderHabitDefinitions = (habits, stats) => {
+  if (!DOM.habitDefinitionsEl || !DOM.habitDefinitionEmptyEl) return;
+
+  if (!habits.length) {
+    DOM.habitDefinitionsEl.innerHTML = '';
+    DOM.habitDefinitionEmptyEl.classList.remove('hidden');
+    return;
+  }
+
+  DOM.habitDefinitionEmptyEl.classList.add('hidden');
+  DOM.habitDefinitionsEl.innerHTML = habits.map((habit) => {
+    const habitId = habit.id;
+    const counts = stats.perHabit.get(habitId) || { today: 0, total: 0 };
+    const goal = typeof habit.dailyGoal === 'number' && habit.dailyGoal > 0
+      ? `${counts.today}/${habit.dailyGoal} lần hôm nay`
+      : `${counts.today} lần hôm nay`;
+    const description = habit.description || habit.note || '';
+    const name = habit.name || habit.title || habitId || 'Thói quen';
+
+    return `
+      <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition">
+        <div class="flex items-start justify-between gap-2">
+          <h4 class="text-base font-semibold text-slate-800">${name}</h4>
+          <span class="text-xs font-semibold px-2 py-1 bg-slate-100 text-slate-600 rounded-full">Tổng: ${counts.total}</span>
+        </div>
+        ${description ? `<p class="text-sm text-slate-500 mt-2">${description}</p>` : ''}
+        <p class="text-sm font-medium text-slate-700 mt-3">${goal}</p>
+      </div>
+    `;
+  }).join('');
+};
+
+const renderHabitLogs = (logs, habits) => {
+  if (!DOM.habitLogListEl || !DOM.habitEmptyEl) return;
+
+  if (!logs.length) {
+    DOM.habitLogListEl.innerHTML = '';
+    DOM.habitEmptyEl.classList.remove('hidden');
+    return;
+  }
+
+  DOM.habitEmptyEl.classList.add('hidden');
+  const habitMap = new Map(habits.map((habit) => [habit.id, habit]));
+
+  DOM.habitLogListEl.innerHTML = logs.slice(0, 12).map((log) => {
+    const habitId = log.habitId || log.habit || log.id;
+    const habitInfo = habitMap.get(habitId) || {};
+    const name = habitInfo.name || habitInfo.title || log.habitName || habitId || 'Không rõ thói quen';
+    const note = log.note || habitInfo.reminder || '';
+    const date = getDateFromLog(log);
+    const timeLabel = date ? formatFullDate(date) : 'Không rõ thời gian';
+
+    return `
+      <li class="bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-slate-800">${name}</p>
+            ${note ? `<p class="text-xs text-slate-500 mt-1">${note}</p>` : ''}
+          </div>
+          <span class="text-xs font-medium text-slate-500 whitespace-nowrap">${timeLabel}</span>
+        </div>
+      </li>
+    `;
+  }).join('');
+};
+
+const updateHabitChart = (stats) => {
+  if (!DOM.habitChartCanvas || typeof Chart === 'undefined') return;
+  const { labels, values } = buildChartDataset(stats.byDate);
+  const ctx = DOM.habitChartCanvas.getContext('2d');
+
+  if (!habitChart) {
+    habitChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Lượt hoàn thành',
+          data: values,
+          backgroundColor: '#0ea5e9',
+          borderRadius: 12
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  } else {
+    habitChart.data.labels = labels;
+    habitChart.data.datasets[0].data = values;
+    habitChart.update();
+  }
+};
+
+const renderHabitTracker = (habits, logs) => {
+  habitState = { habits, logs, stats: computeHabitStats(habits, logs) };
+  const { stats } = habitState;
+
+  toggleHabitSection(true);
+
+  const statusMessage = stats.latestTimestamp
+    ? `Cập nhật lần cuối: ${formatFullDate(stats.latestTimestamp)}`
+    : 'Chưa có nhật ký nào từ bảng công tắc.';
+  updateHabitStatus(statusMessage, false);
+
+  renderHabitSummary(stats);
+  renderHabitDefinitions(habits, stats);
+  renderHabitLogs(logs, habits);
+  updateHabitChart(stats);
+};
+
+const fetchHabitCollections = async (userId) => {
+  const [habitsSnapshot, logsSnapshot] = await Promise.all([
+    getDocs(getHabitsCollectionRef()),
+    getDocs(query(getHabitLogsCollectionRef(), where('userId', '==', userId)))
+  ]);
+
+  const habits = habitsSnapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+  const logs = logsSnapshot.docs
+    .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+    .sort((a, b) => {
+      const timeA = getDateFromLog(a)?.getTime() || 0;
+      const timeB = getDateFromLog(b)?.getTime() || 0;
+      return timeB - timeA;
+    });
+
+  return { habits, logs };
+};
+
+const refreshHabitTracker = async (userId) => {
+  if (!userId) {
+    toggleHabitSection(false, 'Vui lòng đăng nhập để xem nhật ký thói quen.');
+    return;
+  }
+
+  setHabitRefreshLoading(true);
+  updateHabitStatus('Đang tải dữ liệu thói quen...', false);
+
+  try {
+    const { habits, logs } = await fetchHabitCollections(userId);
+    renderHabitTracker(habits, logs);
+  } catch (error) {
+    console.error('Lỗi tải dữ liệu Habit Tracker:', error);
+    updateHabitStatus('Không thể tải dữ liệu thói quen. Vui lòng thử lại.', true);
+  } finally {
+    setHabitRefreshLoading(false);
+  }
+};
+
+const escapeHtml = (unsafe) => unsafe
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+const displayHabitAiMessage = (text) => {
+  if (!DOM.habitAiMessageEl) return;
+  DOM.habitAiMessageEl.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+  DOM.habitAiMessageEl.classList.remove('hidden');
+};
+
+const buildHabitDetailsForPrompt = (habits, stats) => {
+  if (!stats.perHabit || stats.perHabit.size === 0) return 'Chưa có thói quen nào được ghi nhận.';
+  const habitMap = new Map(habits.map((habit) => [habit.id, habit]));
+  const lines = [];
+  stats.perHabit.forEach((counts, habitId) => {
+    const habit = habitMap.get(habitId) || {};
+    const name = habit.name || habit.title || habitId;
+    const goal = typeof habit.dailyGoal === 'number' && habit.dailyGoal > 0
+      ? `${counts.today}/${habit.dailyGoal} lần hôm nay`
+      : `${counts.today} lần hôm nay`;
+    lines.push(`${name}: ${goal}, tổng cộng ${counts.total} lần.`);
+  });
+  return lines.join('\n- ');
+};
+
+const requestHabitMotivation = async () => {
+  if (!habitState.stats) {
+    throw new Error('Chưa có thống kê thói quen.');
+  }
+
+  const stats = habitState.stats;
+  const detailLines = buildHabitDetailsForPrompt(habitState.habits, stats);
+  const prompt = `Bạn là trợ lý truyền cảm hứng cho học sinh lớp 9 đang rèn luyện thói quen học tập bằng bảng công tắc ESP32-C3.`
+    + ` Dựa trên dữ liệu:\n- Lần hoàn thành hôm nay: ${stats.todayCount}\n- Chuỗi ngày duy trì: ${stats.streak}\n- Tổng lượt ghi nhận: ${stats.totalCount}`
+    + `\n- Chi tiết từng thói quen:\n- ${detailLines}\n\nHãy viết một đoạn động viên ngắn (2-3 câu) bằng tiếng Việt, thân thiện, tập trung vào việc duy trì và cải thiện thói quen.`;
+
+  const response = await fetch(GEMINI_API_URL + GEMINI_API_KEY, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        role: 'user',
+        parts: [{ text: prompt }]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API trả về mã ${response.status}`);
+  }
+
+  const data = await response.json();
+  const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!answer) {
+    throw new Error('Không nhận được phản hồi hợp lệ từ Gemini.');
+  }
+  return answer;
+};
+
 try {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
@@ -42,8 +461,55 @@ try {
   DOM.authStatusEl.textContent = "Đang tải...";
 
   const getPostsCollectionRef = () => collection(db, `artifacts/${firebaseConfig.projectId}/public/data/videos`);
-  setupAuthListeners(auth, DOM, (userId) => loadPosts(db, DOM, getPostsCollectionRef));
+  toggleHabitSection(false, 'Vui lòng đăng nhập để xem nhật ký thói quen.');
+
+  const handleUserLogin = async (userId) => {
+    currentUserId = userId;
+    loadPosts(db, DOM, getPostsCollectionRef);
+    await refreshHabitTracker(userId);
+  };
+
+  const handleUserLogout = () => {
+    currentUserId = null;
+    toggleHabitSection(false, 'Vui lòng đăng nhập để xem nhật ký thói quen.');
+  };
+
+  setupAuthListeners(auth, DOM, handleUserLogin, handleUserLogout);
   setupVideoListeners(DOM, { db, storage, getPostsCollectionRef, getUserId });
+
+  if (DOM.habitRefreshBtn) {
+    DOM.habitRefreshBtn.addEventListener('click', () => {
+      if (!currentUserId) {
+        toggleHabitSection(false, 'Vui lòng đăng nhập để xem nhật ký thói quen.');
+        return;
+      }
+      refreshHabitTracker(currentUserId);
+    });
+  }
+
+  if (DOM.habitAiBtn) {
+    DOM.habitAiBtn.addEventListener('click', async () => {
+      if (!habitState.stats || habitState.stats.totalCount === 0) {
+        displayHabitAiMessage('Chưa có dữ liệu thói quen để trợ lý AI phân tích. Hãy bật công tắc ít nhất một lần nhé!');
+        return;
+      }
+
+      DOM.habitAiBtn.disabled = true;
+      DOM.habitAiBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      displayHabitAiMessage('Đang tạo gợi ý động lực...');
+
+      try {
+        const answer = await requestHabitMotivation();
+        displayHabitAiMessage(answer);
+      } catch (error) {
+        console.error('Lỗi gọi Gemini cho Habit Tracker:', error);
+        displayHabitAiMessage('Không thể kết nối tới trợ lý AI lúc này. Bạn hãy thử lại sau nhé.');
+      } finally {
+        DOM.habitAiBtn.disabled = false;
+        DOM.habitAiBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      }
+    });
+  }
 // =============================== NÚT THÊM VIDEO ===============================
 const openPostBtn = document.getElementById('open-post-modal-btn');
 const postModal = document.getElementById('post-modal');

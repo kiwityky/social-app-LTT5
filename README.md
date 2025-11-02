@@ -123,4 +123,4 @@ firebase deploy
 
 ## 📄 Giấy phép
 Dự án được phát hành cho mục đích **nghiên cứu và giáo dục phi thương mại**.  
-Mọi quyền khác thuộc về nhóm phát triển LTT06.
+Mọi quyền khác thuộc về nhóm phát triển LTT5.

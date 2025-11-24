@@ -398,6 +398,96 @@ input::placeholder {
   border-radius: 8px;
 }
 
+/* ===========================
+   BỐ CỤC MÁY TÍNH — HEADER NGẮN + FOOTER DỌC
+=========================== */
+@media (min-width: 1024px) {
+  /* Chia cột để giữ thứ tự: header (trái) — video (giữa) — đăng xuất (phải) */
+  #app {
+    display: grid;
+    grid-template-columns: 260px 1fr 170px;
+    grid-template-rows: 1fr;
+    min-height: 100vh;
+  }
+
+  /* Thu gọn header về bên trái */
+  .desktop-header {
+    left: 0;
+    right: auto;
+    width: 260px;
+    max-width: none;
+    margin: 0;
+    border-radius: 0 0 16px 0;
+    justify-content: flex-start;
+    gap: 0.5rem;
+  }
+
+  main {
+    grid-column: 2;
+    margin-top: 0;
+    padding: 12px 140px 12px 96px;
+    display: flex;
+    justify-content: center;
+  }
+
+  /* Mở rộng khung video sát viền trên/dưới, chừa khoảng cho thanh dọc và nút đăng xuất */
+  #video-feed-container {
+    height: calc(100vh - 24px);
+    max-width: none;
+    width: min(920px, calc(100vw - 360px));
+    margin: 12px auto;
+    border-left: none;
+    border-right: none;
+  }
+
+  /* Dựng footer thành thanh dọc, vuông góc với header và ép sát mép trái */
+  #bottom-nav {
+    top: 92px;
+    bottom: auto;
+    left: 0;
+    right: auto;
+    margin: 0;
+    max-width: none;
+    width: 82px;
+    height: calc(100vh - 92px);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 14px;
+    padding: 1rem 0.5rem;
+    border-top: none;
+    border-right: 3px solid #0277bd;
+    border-bottom: 0;
+    border-radius: 0 14px 14px 0;
+  }
+
+  #bottom-nav::before {
+    top: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 60%;
+    animation: silverSweep 6s linear infinite;
+  }
+
+  /* Đẩy nút Đăng xuất ra khỏi header sang phía đối diện video */
+  .desktop-header #auth-status {
+    position: fixed;
+    right: 22px;
+    top: 50%;
+    transform: translateY(-50%);
+    max-width: 170px;
+    text-align: right;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  #auth-status button {
+    width: 100%;
+  }
+}
+
 #search-box {
   background-color: #0b1733 !important; /* xanh đen */
   color: white !important;

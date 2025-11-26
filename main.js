@@ -25,7 +25,7 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-import { firebaseConfig, getDOMElements, GEMINI_API_KEY, GEMINI_API_URL } from './config.js';
+import { firebaseConfig, getDOMElements, GEMINI_API_KEY, GEMINI_API_URL, closeModal } from './config.js';
 import { setupAuthListeners, getUserId } from './auth.js';
 import { loadPosts, setupVideoListeners } from './video-feed.js';
 
@@ -423,6 +423,21 @@ if (searchBtn && searchBox) {
   });
 }
 
+// Đóng search box khi click ra ngoài
+if (searchBox && searchBtn) {
+  document.addEventListener('click', (e) => {
+    const isSearchOpen = !searchBox.classList.contains('hidden');
+    if (!isSearchOpen) return;
+
+    const clickInsideBox = searchBox.contains(e.target);
+    const clickOnButton  = searchBtn.contains(e.target);
+
+    if (!clickInsideBox && !clickOnButton) {
+      searchBox.classList.add('hidden');
+    }
+  });
+}
+
 // Khi bấm nút TÌM
 if (searchSubmit) {
   searchSubmit.addEventListener('click', () => {
@@ -445,3 +460,17 @@ if (searchSubmit) {
     if (!found) alert('Không tìm thấy video nào phù hợp.');
   });
 }
+
+// Đóng modal khi click ra ngoài nội dung
+const modalIds = ['post-modal', 'profile-modal', 'game-center-modal'];
+
+modalIds.forEach(id => {
+  const modalEl = document.getElementById(id);
+  if (!modalEl) return;
+
+  modalEl.addEventListener('click', (e) => {
+    if (e.target === modalEl) {
+      closeModal(id);
+    }
+  });
+});

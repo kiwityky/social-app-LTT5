@@ -102,12 +102,15 @@ export const setupAuthListeners = (auth, DOM, loadPostsCallback) => {
         if (user) {
             userId = user.uid;
             
-            // THAY THẾ TRẠNG THÁI BẰNG NÚT ĐĂNG XUẤT
+            // THAY THẾ TRẠNG THÁI BẰNG NÚT ĐĂNG XUẤT (ICON ONLY)
             DOM.authStatusEl.innerHTML = `
-                <button id="header-logout-btn" 
+                <button id="header-logout-btn"
                         onclick="handleLogout()"
-                        class="text-sm font-bold bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-lg shadow transition duration-150">
-                    Đăng xuất
+                        class="logout-icon-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5">
+                      <path fill="currentColor" d="M12 2v10m0 0 3-3m-3 3-3-3M7 13v5a5 5 0 0 0 10 0v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="sr-only">Đăng xuất</span>
                 </button>
             `;
             

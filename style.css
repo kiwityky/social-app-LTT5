@@ -89,6 +89,16 @@ header #auth-status button {
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25) !important;
 }
 
+header #auth-status .logout-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px !important;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px !important;
+}
+
 /* Khi hover — sáng hơn chút, không viền trắng */
 header #auth-status button:hover {
   background: linear-gradient(135deg, #039be5, #0277bd) !important;
@@ -507,6 +517,15 @@ input::placeholder {
   background-color: #0b1733 !important; /* xanh đen */
   color: white !important;
   border: 1px solid #1b3f7b;
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  bottom: auto !important;
+  z-index: 2000 !important;
+  width: 100%;
+  max-width: 360px;
+  padding: 12px;
 }
 
 #search-box input {
@@ -538,13 +557,4 @@ input::placeholder {
 }
 #game-center-modal .bg-white {
   margin-top: -70px; /* di chuyển lên trên khoảng 30px */
-}
-/* Fix vị trí ô tìm kiếm không bị trôi sang trái */
-#search-box {
-  position: fixed !important;      /* không còn bám theo bottom-nav nữa */
-  left: 380% !important;
-  transform: translateX(-50%) !important;
-  bottom: 80px !important;         /* cao hơn một chút so với đáy màn hình */
-  z-index: 2000 !important;
-  max-width: 90vw;                 /* tránh tràn màn hình trên mobile */
 }

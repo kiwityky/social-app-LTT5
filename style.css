@@ -164,17 +164,20 @@ header h1 span {
    KHUNG VIDEO CHÍNH
 =========================== */
 #video-feed-container {
-  height: calc(100vh - 120px);
+  position: relative;
+  z-index: 100;
+  height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
-  max-width: 420px;
-  margin: auto;
-  border-left: 1px solid #e2e8f0;
-  border-right: 1px solid #e2e8f0;
+  max-width: 100vw;
+  margin: 0 auto;
+  border: none;
+  padding: 0;
 }
 .video-snap-item {
   scroll-snap-align: start;
-  height: 100%;
+  height: 100vh;
+  min-height: 100vh;
   background-color: black;
   display: flex;
   align-items: center;
@@ -183,8 +186,8 @@ header h1 span {
 .video-display {
   width: 100%;
   height: 100%;
-  max-height: 75vh;
-  object-fit: contain;
+  max-height: none;
+  object-fit: cover;
 }
 
 /* ===========================
@@ -483,9 +486,9 @@ input::placeholder {
   }
 
   #video-feed-container {
-    max-width: 520px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 100vw;
+    margin-left: 0;
+    margin-right: 0;
   }
 
   #bottom-nav {

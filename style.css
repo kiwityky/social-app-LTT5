@@ -539,3 +539,12 @@ input::placeholder {
 #game-center-modal .bg-white {
   margin-top: -70px; /* di chuyển lên trên khoảng 30px */
 }
+/* Fix vị trí ô tìm kiếm không bị trôi sang trái */
+#search-box {
+  position: fixed !important;      /* không còn bám theo bottom-nav nữa */
+  left: 380% !important;
+  transform: translateX(-50%) !important;
+  bottom: 80px !important;         /* cao hơn một chút so với đáy màn hình */
+  z-index: 2000 !important;
+  max-width: 90vw;                 /* tránh tràn màn hình trên mobile */
+}

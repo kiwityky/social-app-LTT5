@@ -10,9 +10,9 @@ export const firebaseConfig = {
     appId: "1:792522787659:web:1e62ab3524b7ac830476ce",
     measurementId: "G-ZZN3QL0LB9"
 };
-export const GEMINI_API_KEY = "AIzaSyAB77Kezrrrd_MacPEDFPrcl2hPrnTGFk0"; // Cần thay bằng key hợp lệ
-export const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=";
-
+export const GEMINI_API_KEY = "AIzaSyCzLLJK2bgrB2798EAhhHfTAuQMnGBmvgc"; // Cần thay bằng key hợp lệ
+export const GEMINI_MODEL = "gemini-2.5-flash"; 
+export const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 // ĐƯỜNG DẪN SVG
 export const MUTE_ICON_PATH = 'svg/mute.svg';
 export const UNMUTE_ICON_PATH = 'svg/unmute.svg';

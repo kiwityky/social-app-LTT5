@@ -314,30 +314,53 @@ const aiSend = document.getElementById('ai-send');
 const aiMessages = document.getElementById('ai-messages');
 const aiClose = document.getElementById('close-ai-chat');
 
-if (logoEl) logoEl.addEventListener('click', () => chatbox.classList.toggle('hidden'));
-if (aiClose) aiClose.addEventListener('click', () => chatbox.classList.add('hidden'));
+if (logoEl) {
+  logoEl.addEventListener('click', () => {
+    const wasHidden = chatbox.classList.contains('hidden');
+    chatbox.classList.toggle('hidden');
 
-if (aiSend) {
-  aiSend.addEventListener('click', async () => {
-    const question = aiInput.value.trim();
-    if (!question) return;
-    appendMessage('user', question);
-    aiInput.value = '';
-    appendMessage('bot', 'Đang xử lý...');
-    try {
-      const response = await fetch(GEMINI_API_URL + GEMINI_API_KEY, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: question }] }] })
-      });
-      const data = await response.json();
-      const answer = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Xin lỗi, tôi chưa có câu trả lời cho điều đó.";
-      updateLastBotMessage(answer);
-    } catch (err) {
-      console.error(err);
-      updateLastBotMessage("Lỗi khi gọi API Gemini.");
+    // ⭐ Nếu chatbox vừa được mở ra → gửi lời chào
+    if (wasHidden) {
+      appendMessage('bot', 'Xin chào, tôi là Fine, trợ lý ảo của bạn! Tôi có thể giúp gì cho bạn?');
+      aiMessages.scrollTop = aiMessages.scrollHeight;
     }
   });
+}
+if (aiClose) aiClose.addEventListener('click', () => chatbox.classList.add('hidden'));
+
+// Hàm gọi Gemini riêng để dễ debug
+async function callGemini(question) {
+  const res = await fetch(GEMINI_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY, // 🔑 Key truyền qua header
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: question }]
+        }
+      ]
+    }),
+  });
+
+  const data = await res.json();
+  console.log("Gemini response:", res.status, data);
+
+  if (!res.ok) {
+    const msg = data?.error?.message || `Mã lỗi HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  const answer =
+    data?.candidates?.[0]?.content?.parts
+      ?.map((p) => p.text || "")
+      .join("\n")
+      .trim() || "";
+
+  return answer || "Xin lỗi, trợ lý chưa có câu trả lời phù hợp.";
 }
 
 function appendMessage(sender, text) {
@@ -354,6 +377,36 @@ function updateLastBotMessage(newText) {
   const last = aiMessages.querySelector('.bg-gray-200:last-child');
   if (last) last.textContent = newText;
 }
+
+if (aiSend) {
+  aiSend.addEventListener("click", async () => {
+    const question = aiInput.value.trim();
+    if (!question) return;
+
+    appendMessage("user", question);
+    aiInput.value = "";
+    appendMessage("bot", "Đang xử lý...");
+
+    try {
+      const answer = await callGemini(question);
+      updateLastBotMessage(answer);
+    } catch (err) {
+      console.error("Gemini error:", err);
+      updateLastBotMessage("Lỗi khi gọi API Gemini: " + (err.message || ""));
+    }
+  });
+}
+
+// (Tuỳ chọn) Nhấn Enter để gửi
+if (aiInput && aiSend) {
+  aiInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      aiSend.click();
+    }
+  });
+}
+
 // =============================== TÌM KIẾM VIDEO ===============================
 const searchBtn = document.getElementById('search-btn');
 const searchBox = document.getElementById('search-box');

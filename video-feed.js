@@ -318,7 +318,7 @@ const handleLike = async (postId) => {
     const userId = deps?.getUserId?.();
     if (!userId) return alert("Vui lòng đăng nhập.");
 
-    const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
+    const postRef = doc(deps.db, `artifacts/${firebaseConfig.projectId}/public/data/videos/${postId}`);
     const postEl = document.querySelector(`[data-id='${postId}']`);
     const likeBtn = postEl?.querySelector('.like-btn');
     const likeCountEl = postEl?.querySelector('.like-count');
@@ -346,7 +346,7 @@ const handleShare = async (postId, videoUrl) => {
     const userId = deps?.getUserId?.();
     if (!userId) return alert("Vui lòng đăng nhập.");
 
-    const postRef = doc(deps.db, 'artifacts', firebaseConfig.projectId, 'public', 'data', 'videos', postId);
+    const postRef = doc(deps.db, `artifacts/${firebaseConfig.projectId}/public/data/videos/${postId}`);
     const snapshot = await getDoc(postRef);
     const data = snapshot.exists() ? snapshot.data() : {};
     const sharedBy = Array.isArray(data.sharedBy) ? data.sharedBy : [];

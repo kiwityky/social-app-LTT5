@@ -94,8 +94,8 @@ header #auth-status .logout-icon-btn {
   align-items: center;
   justify-content: center;
   padding: 6px 8px !important;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px !important;
 }
 
@@ -557,4 +557,11 @@ input::placeholder {
 }
 #game-center-modal .bg-white {
   margin-top: -70px; /* di chuyển lên trên khoảng 30px */
+}
+@media (min-width: 1024px) {
+  #search-box {
+    width: 240px !important;   /* ép chiều rộng cố định */
+    max-width: none !important;
+    margin-left: 250%;
+  }
 }

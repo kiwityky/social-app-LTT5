@@ -107,9 +107,7 @@ export const setupAuthListeners = (auth, DOM, loadPostsCallback) => {
                 <button id="header-logout-btn"
                         onclick="handleLogout()"
                         class="logout-icon-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="h-5 w-5">
-                      <path fill="currentColor" d="M12 2v10m0 0 3-3m-3 3-3-3M7 13v5a5 5 0 0 0 10 0v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
+                    <img src="svg/sign-out.svg" class="h-5 w-5" alt="Đăng xuất">
                     <span class="sr-only">Đăng xuất</span>
                 </button>
             `;

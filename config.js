@@ -21,13 +21,6 @@ export const PAUSE_ICON_PATH = 'svg/pause.svg';
 export const LIKE_ICON_PATH = 'svg/like.svg';
 export const SHARE_ICON_PATH = 'svg/share.svg';
 
-// Dữ liệu hồ sơ chuyên môn của giảng viên (Dùng cho tính năng AI)
-export const userExpertise = `
-    Giảng viên Vật lý và Công nghệ thông tin tại Việt Nam. 
-    Lĩnh vực nghiên cứu/giảng dạy: vật lý cổ điển, vật lý hạt nhân, lập trình web fullstack, lập trình nhúng, internet of things (IoT), AI. 
-    Sở thích: học ngoại ngữ (tiếng Anh, tiếng Trung), đọc sách, sức khỏe.
-`;
-
 /**
  * Lấy các phần tử DOM cần thiết và xuất ra ngoài.
  * Hàm này giúp tránh bị lỗi khi các module khác cố gắng truy cập DOM trước khi nó được load.

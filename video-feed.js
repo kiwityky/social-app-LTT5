@@ -241,6 +241,12 @@ const renderVideoFeed = (posts, DOM, append = false) => {
         const likeCountText = post.likes?.length ? String(post.likes.length) : '';
         const shareCountText = post.shareCount ? String(post.shareCount) : '';
 
+        const reportSubject = encodeURIComponent('Báo cáo video xấu');
+        const reportBody = encodeURIComponent(
+            `Tôi muốn báo cáo video sau:\n- ID: ${post.id}\n- URL: ${post.videoUrl}\nLý do:`
+        );
+        const reportMailto = `mailto:daoquynhanh010211@gmail.com?subject=${reportSubject}&body=${reportBody}`;
+
         postElement.innerHTML = `
             ${mediaHtml}
             ${playPauseOverlayHtml}
@@ -263,6 +269,7 @@ const renderVideoFeed = (posts, DOM, append = false) => {
                     <img class="share-icon h-6 w-6" src="${SHARE_ICON_PATH}">
                 </button>
                 <p class="share-count">${shareCountText}</p>
+                <a class="report-btn ctrl-btn" href="${reportMailto}" title="Báo cáo video" aria-label="Báo cáo video">🚫</a>
             </div>
         `;
 

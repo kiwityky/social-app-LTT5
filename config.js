@@ -2,7 +2,7 @@
 // CẤU HÌNH FIREBASE VÀ AI
 // =================================================================================================
 export const firebaseConfig = {
-     apiKey: "AIzaSyAB77Kezrrrd_MacPEDFPrcl2hPrnTGFk0", // Cần thay bằng key hợp lệ
+     apiKey: "AIzaSyB7YlkBxR_SOz9lS5rkachuGRylaAjZNT4", // Cần thay bằng key hợp lệ
     authDomain: "ltt5-e25a0.firebaseapp.com",
     projectId: "ltt5-e25a0",
     storageBucket: "ltt5-e25a0.firebasestorage.app", 

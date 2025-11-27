@@ -25,7 +25,7 @@ import {
   getDownloadURL 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-import { firebaseConfig, getDOMElements, closeModal } from './config.js';
+import { firebaseConfig, getDOMElements, GEMINI_API_KEY, GEMINI_API_URL, closeModal } from './config.js';
 import { setupAuthListeners, getUserId } from './auth.js';
 import { loadPosts, setupVideoListeners } from './video-feed.js';
 
@@ -330,10 +330,11 @@ if (aiClose) aiClose.addEventListener('click', () => chatbox.classList.add('hidd
 
 // Hàm gọi Gemini riêng để dễ debug
 async function callGemini(question) {
-   const res = await fetch("https://raspy-shape-8b61.huynhanhdung5497.workers.dev/", {
+   const res = await fetch(GEMINI_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      "x-goog-api-key": GEMINI_API_KEY, // 🔑 Key truyền qua header
     },
     body: JSON.stringify({
       contents: [
